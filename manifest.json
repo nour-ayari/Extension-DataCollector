@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Data Collector",
+  "version": "1.0",
+  "description": "Collecte anonyme de comportements e-commerce",
+  "permissions": ["storage", "tabs", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["consent.html", "consent.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
