@@ -4,13 +4,35 @@
   "version": "1.0",
   "description": "Collecte anonyme de comportements e-commerce",
   "permissions": ["storage", "tabs", "scripting"],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": [
+    "https://*.amazon.fr/*",
+    "https://*.drest.tn/*",
+    "https://*.aliexpress.com/*",
+    "https://*.mytek.tn/*",
+    "https://*.ebay.com/*",
+    "https://*.alibaba.com/*",
+    "https://*.walmart.com/*",
+    "https://*.jumia.*/*",
+    "https://*.zalando.*/*",
+    "https://*.myshopify.com/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+    "https://*.amazon.fr/*",
+    "https://*.drest.tn/*",
+    "https://*.aliexpress.com/*",
+    "https://*.mytek.tn/*",
+    "https://*.ebay.com/*",
+    "https://*.alibaba.com/*",
+    "https://*.walmart.com/*",
+    "https://*.jumia.*/*",
+    "https://*.zalando.*/*",
+    "https://*.myshopify.com/*"
+  ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
