@@ -12,8 +12,14 @@
     "https://*.ebay.com/*",
     "https://*.alibaba.com/*",
     "https://*.walmart.com/*",
-    "https://*.jumia.*/*",
-    "https://*.zalando.*/*",
+    "https://*.jumia.com/*",
+    "https://*.jumia.tn/*",
+    "https://*.jumia.ma/*",
+    "https://*.jumia.dz/*",
+    "https://*.zalando.com/*",
+    "https://*.zalando.fr/*",
+    "https://*.zalando.de/*",
+    "https://*.zalando.co.uk/*",
     "https://*.myshopify.com/*"
   ],
   "background": {
@@ -22,17 +28,23 @@
   "content_scripts": [
     {
       "matches": [
-    "https://*.amazon.fr/*",
-    "https://*.drest.tn/*",
-    "https://*.aliexpress.com/*",
-    "https://*.mytek.tn/*",
-    "https://*.ebay.com/*",
-    "https://*.alibaba.com/*",
-    "https://*.walmart.com/*",
-    "https://*.jumia.*/*",
-    "https://*.zalando.*/*",
-    "https://*.myshopify.com/*"
-  ],
+        "https://*.amazon.fr/*",
+        "https://*.drest.tn/*",
+        "https://*.aliexpress.com/*",
+        "https://*.mytek.tn/*",
+        "https://*.ebay.com/*",
+        "https://*.alibaba.com/*",
+        "https://*.walmart.com/*",
+        "https://*.jumia.com/*",
+        "https://*.jumia.tn/*",
+        "https://*.jumia.ma/*",
+        "https://*.jumia.dz/*",
+        "https://*.zalando.com/*",
+        "https://*.zalando.fr/*",
+        "https://*.zalando.de/*",
+        "https://*.zalando.co.uk/*",
+        "https://*.myshopify.com/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
