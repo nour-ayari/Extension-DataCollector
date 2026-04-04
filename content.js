@@ -129,6 +129,8 @@ function sendEvent(eventName, properties = {}) {
                 event: eventName,
                 context: {
                   sessionId: sessionId,
+                  userAgent: navigator.userAgent, 
+
                   device: {
                     category: getDeviceCategory()
                   }
