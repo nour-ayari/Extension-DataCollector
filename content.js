@@ -1,3 +1,11 @@
+// -------------------------
+// Chrome Extension Tracking Script
+// Fully DB-ready with session, engagement, and product tracking
+// -------------------------
+
+// -------------------------
+// Utility: check extension
+// -------------------------
 function isExtensionValid() {
   try {
     return !!chrome.runtime?.id;
@@ -22,7 +30,7 @@ function getAnonymousId(callback) {
 
 function getSessionId(callback) {
   chrome.storage.local.get(
-    ["sessionId", "sessionStart", "sessionLastActivity"],
+    ["sessionId", "sessionStart", "sessionLastActivity", "pagesPerSession", "nbVisits"],
     (data) => {
       const now = Date.now();
       const timeoutMs = 30 * 60 * 1000; // 30 min inactivity
@@ -31,24 +39,31 @@ function getSessionId(callback) {
         !data.sessionLastActivity ||
         now - data.sessionLastActivity > timeoutMs;
 
+      let sessionId = data.sessionId;
+      let pagesPerSession = data.pagesPerSession || 0;
+      let nbVisits = data.nbVisits || 0;
+
       if (isExpired) {
-        const newSessionId = "sess_" + crypto.randomUUID();
-        chrome.storage.local.set(
-          {
-            sessionId: newSessionId,
-            sessionStart: now,
-            sessionLastActivity: now,
-            eventSequence: [],
-            addedToCart: false,
-            checkoutStarted: false,
-            purchaseCompleted: false,
-            landingPage: location.href
-          },
-          () => callback(newSessionId, true)
-        );
+        sessionId = "sess_" + crypto.randomUUID();
+        pagesPerSession = 1;
+        nbVisits = (nbVisits || 0) + 1;
+
+        chrome.storage.local.set({
+          sessionId,
+          sessionStart: now,
+          sessionLastActivity: now,
+          pagesPerSession,
+          nbVisits,
+          eventSequence: [],
+          addedToCart: false,
+          checkoutStarted: false,
+          purchaseCompleted: false,
+          landingPage: location.href
+        }, () => callback(sessionId, true));
       } else {
-        chrome.storage.local.set({ sessionLastActivity: now }, () =>
-          callback(data.sessionId, false)
+        pagesPerSession += 1;
+        chrome.storage.local.set({ sessionLastActivity: now, pagesPerSession }, () =>
+          callback(sessionId, false)
         );
       }
     }
@@ -62,13 +77,8 @@ function updateSessionActivity() {
 function appendToSessionSequence(eventName, callback) {
   chrome.storage.local.get(["eventSequence"], (data) => {
     const seq = Array.isArray(data.eventSequence) ? data.eventSequence : [];
-    seq.push({
-      event: eventName,
-      ts: new Date().toISOString()
-    });
-
-    const trimmed = seq.slice(-20);
-
+    seq.push({ event: eventName, ts: new Date().toISOString() });
+    const trimmed = seq.slice(-50); // keep last 50 events
     chrome.storage.local.set({ eventSequence: trimmed }, () => {
       if (callback) callback(trimmed);
     });
@@ -80,22 +90,11 @@ function appendToSessionSequence(eventName, callback) {
 // -------------------------
 function detectPageType() {
   const url = location.href.toLowerCase();
-
-  if (url.includes("/product") || document.querySelector('[class*="product"]')) {
-    return "product";
-  }
-  if (url.includes("/cart") || url.includes("panier")) {
-    return "cart";
-  }
-  if (url.includes("/checkout") || url.includes("commande") || url.includes("payment")) {
-    return "checkout";
-  }
-  if (url.includes("/category") || url.includes("/shop") || url.includes("/collection")) {
-    return "category";
-  }
-  if (url.includes("promo") || url.includes("offer") || url.includes("discount")) {
-    return "promo";
-  }
+  if (url.includes("/product") || document.querySelector('[class*="product"]')) return "product";
+  if (url.includes("/cart") || url.includes("panier")) return "cart";
+  if (url.includes("/checkout") || url.includes("commande") || url.includes("payment")) return "checkout";
+  if (url.includes("/category") || url.includes("/shop") || url.includes("/collection")) return "category";
+  if (url.includes("promo") || url.includes("offer") || url.includes("discount")) return "promo";
   return "other";
 }
 
@@ -108,41 +107,16 @@ function getDeviceCategory() {
 
 function inferTrafficSource() {
   const ref = (document.referrer || "").toLowerCase();
-
   if (!ref) return "direct";
-  if (
-    ref.includes("google.") ||
-    ref.includes("bing.") ||
-    ref.includes("yahoo.") ||
-    ref.includes("duckduckgo.")
-  ) {
-    return "organic";
-  }
-  if (
-    ref.includes("facebook.") ||
-    ref.includes("instagram.") ||
-    ref.includes("tiktok.") ||
-    ref.includes("linkedin.") ||
-    ref.includes("twitter.") ||
-    ref.includes("x.com")
-  ) {
-    return "social";
-  }
-  if (
-    ref.includes("mail.") ||
-    ref.includes("gmail.") ||
-    ref.includes("outlook.") ||
-    ref.includes("newsletter")
-  ) {
-    return "email";
-  }
+  if (ref.includes("google.") || ref.includes("bing.") || ref.includes("yahoo.") || ref.includes("duckduckgo.")) return "organic";
+  if (ref.includes("facebook.") || ref.includes("instagram.") || ref.includes("tiktok.") || ref.includes("linkedin.") || ref.includes("twitter.") || ref.includes("x.com")) return "social";
+  if (ref.includes("mail.") || ref.includes("gmail.") || ref.includes("outlook.") || ref.includes("newsletter")) return "email";
   return "referral";
 }
 
 function getLandingPage() {
   const existing = sessionStorage.getItem("landingPage");
   if (existing) return existing;
-
   sessionStorage.setItem("landingPage", location.href);
   return location.href;
 }
@@ -164,33 +138,41 @@ function getBaseProperties() {
   };
 }
 
+// -------------------------
+// Product / promo info
+// -------------------------
 function getProductInfoFromPage() {
-  const productName =
-    document.querySelector("h1")?.innerText?.trim() || null;
+  const productName = document.querySelector("h1")?.innerText?.trim() || null;
+  const priceText = document.querySelector('[class*="price"], .price, [data-price]')?.innerText?.trim() || null;
+  const productId = document.querySelector("[data-product-id]")?.getAttribute("data-product-id") || null;
+  const category = document.querySelector("[data-category]")?.getAttribute("data-category") || null;
+  const brand = document.querySelector("[data-brand]")?.getAttribute("data-brand") || null;
+  const sku = document.querySelector("[data-sku]")?.getAttribute("data-sku") || null;
 
-  const priceText =
-    document.querySelector('[class*="price"], .price, [data-price]')?.innerText?.trim() || null;
+  return { product_id: productId, product_name: productName, price_text: priceText, category, brand, sku };
+}
 
-  const productId =
-    document.querySelector("[data-product-id]")?.getAttribute("data-product-id") || null;
-
-  const category =
-    document.querySelector("[data-category]")?.getAttribute("data-category") || null;
-
-  const brand =
-    document.querySelector("[data-brand]")?.getAttribute("data-brand") || null;
-
-  const sku =
-    document.querySelector("[data-sku]")?.getAttribute("data-sku") || null;
-
-  return {
-    product_id: productId,
-    product_name: productName,
-    price_text: priceText,
-    category,
-    brand,
-    sku
-  };
+// -------------------------
+// Event enrichment (DB-ready)
+// -------------------------
+async function enrichEventProperties(props, identity = {}) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(["nbVisits", "pagesPerSession", "addedToCart"], (data) => {
+      resolve({
+        ...props,
+        client_id: identity.clientId || null,
+        session_id: identity.sessionId || null,
+        event_name: identity.eventName || null,
+        event_type: identity.eventName || null,
+        nb_visits: data.nbVisits || 1,
+        pages_per_session: data.pagesPerSession || 1,
+        cart_abandonned: !!data.addedToCart && !props.purchase_completed,
+        is_bounce: props.is_bounce || false,
+        age: null, // optional, to fill later
+        gender: null // optional, to fill later
+      });
+    });
+  });
 }
 
 // -------------------------
@@ -206,32 +188,31 @@ function sendEvent(eventName, properties = {}) {
       getAnonymousId((anonId) => {
         getSessionId((sessionId) => {
           appendToSessionSequence(eventName, (sequence) => {
-            chrome.runtime.sendMessage(
-              {
+            enrichEventProperties({
+              ...getBaseProperties(),
+              ...properties,
+              sequence: sequence.map((x) => x.event)
+              }, {
+                clientId: anonId,
+                sessionId,
+                eventName
+              }).then((enrichedProps) => {
+              chrome.runtime.sendMessage({
                 type: "TRACK_EVENT",
                 payload: {
                   anonymousId: anonId,
                   event: eventName,
+                  session_id: sessionId,
+                  client_id: anonId,
                   context: {
-                    sessionId: sessionId,
+                    sessionId,
                     userAgent: navigator.userAgent,
-                    device: {
-                      category: getDeviceCategory()
-                    }
+                    device: { category: getDeviceCategory() }
                   },
-                  properties: {
-                    ...getBaseProperties(),
-                    ...properties,
-                    sequence: sequence.map((x) => x.event)
-                  }
+                  properties: enrichedProps
                 }
-              },
-              () => {
-                if (chrome.runtime.lastError) {
-                  console.warn("sendMessage error:", chrome.runtime.lastError.message);
-                }
-              }
-            );
+              });
+            });
           });
         });
       });
@@ -252,32 +233,19 @@ let clickCount = 0;
 let lastScrollTrackedAt = 0;
 
 // -------------------------
-// 1. first_visit + page_view + product_view + promo_viewed
+// 1. First visit + page view + product/promo views
 // -------------------------
 window.addEventListener("load", () => {
   getAnonymousId((anonId, isFirstVisit) => {
     if (isFirstVisit) {
-      sendEvent("first_visit", {
-        landing_page: location.href,
-        landing_referrer: document.referrer || null
-      });
+      sendEvent("first_visit", { landing_page: location.href, landing_referrer: document.referrer || null });
     }
 
     sendEvent("page_view", {});
-
     const pageType = detectPageType();
 
-    if (pageType === "product") {
-      sendEvent("product_view", {
-        ...getProductInfoFromPage()
-      });
-    }
-
-    if (pageType === "promo") {
-      sendEvent("promo_viewed", {
-        promo_url: location.href
-      });
-    }
+    if (pageType === "product") sendEvent("product_view", getProductInfoFromPage());
+    if (pageType === "promo") sendEvent("promo_viewed", { promo_url: location.href });
   });
 });
 
@@ -286,7 +254,6 @@ window.addEventListener("load", () => {
 // -------------------------
 document.addEventListener("click", (e) => {
   if (!isExtensionValid()) return;
-
   updateSessionActivity();
 
   const el = e.target.closest("a, button, input[type='submit'], [data-product], [class*='product']");
@@ -299,124 +266,34 @@ document.addEventListener("click", (e) => {
   const cls = (el.className || "").toString().toLowerCase();
   const productInfo = getProductInfoFromPage();
 
-  // add_to_cart
-  if (
-    text.includes("add to cart") ||
-    text.includes("ajouter au panier") ||
-    cls.includes("add-to-cart")
-  ) {
+  const trackEvent = (eventName, extraProps = {}) => sendEvent(eventName, { ...productInfo, ...extraProps });
+
+  if (text.includes("add to cart") || text.includes("ajouter au panier") || cls.includes("add-to-cart")) {
     chrome.storage.local.set({ addedToCart: true });
-    sendEvent("add_to_cart", {
-      ...productInfo,
-      quantity: 1,
-      element_text: text,
-      href
-    });
-    return;
+    return trackEvent("add_to_cart", { quantity: 1, element_text: text, href });
   }
-
-  // remove_from_cart
-  if (
-    text.includes("remove") ||
-    text.includes("supprimer") ||
-    cls.includes("remove-from-cart")
-  ) {
-    sendEvent("remove_from_cart", {
-      ...productInfo,
-      quantity: 1,
-      element_text: text,
-      href
-    });
-    return;
+  if (text.includes("remove") || text.includes("supprimer") || cls.includes("remove-from-cart")) {
+    return trackEvent("remove_from_cart", { quantity: 1, element_text: text, href });
   }
-
-  // add_quantity / decrease quantity
-  if (
-    text.includes("+") ||
-    text.includes("increase") ||
-    text.includes("augmenter") ||
-    cls.includes("qty-plus")
-  ) {
-    sendEvent("add_quantity", {
-      ...productInfo,
-      change_type: "increase",
-      element_text: text,
-      href
-    });
-    return;
+  if (text.includes("+") || text.includes("increase") || text.includes("augmenter") || cls.includes("qty-plus")) {
+    return trackEvent("add_quantity", { change_type: "increase", element_text: text, href });
   }
-
-  if (
-    text.includes("-") ||
-    text.includes("decrease") ||
-    text.includes("diminuer") ||
-    cls.includes("qty-minus")
-  ) {
-    sendEvent("add_quantity", {
-      ...productInfo,
-      change_type: "decrease",
-      element_text: text,
-      href
-    });
-    return;
+  if (text.includes("-") || text.includes("decrease") || text.includes("diminuer") || cls.includes("qty-minus")) {
+    return trackEvent("add_quantity", { change_type: "decrease", element_text: text, href });
   }
-
-  // checkout_started
-  if (
-    text.includes("checkout") ||
-    text.includes("commander") ||
-    text.includes("payer") ||
-    text.includes("order")
-  ) {
+  if (text.includes("checkout") || text.includes("commander") || text.includes("payer") || text.includes("order")) {
     chrome.storage.local.set({ checkoutStarted: true });
-    sendEvent("checkout_started", {
-      element_text: text,
-      href
-    });
-    return;
+    return trackEvent("checkout_started", { element_text: text, href });
   }
-
-  // login
-  if (
-    text.includes("login") ||
-    text.includes("log in") ||
-    text.includes("connexion") ||
-    cls.includes("login")
-  ) {
-    sendEvent("login", {
-      method: "unknown",
-      logged_in: true
-    });
-    return;
+  if (text.includes("pay now") || text.includes("payment completed") || text.includes("confirm payment") || text.includes("paiement confirmé")) {
+    return trackEvent("payment_completed", { status: "success" });
   }
-
-  // payment_completed
-  if (
-    text.includes("pay now") ||
-    text.includes("payment completed") ||
-    text.includes("confirm payment") ||
-    text.includes("paiement confirmé")
-  ) {
-    sendEvent("payment_completed", {
-      status: "success"
-    });
-    return;
-  }
-
-  // purchase_completed
-  if (
-    text.includes("purchase") ||
-    text.includes("buy now") ||
-    text.includes("order confirmed") ||
-    text.includes("achat confirmé")
-  ) {
+  if (text.includes("purchase") || text.includes("buy now") || text.includes("order confirmed") || text.includes("achat confirmé")) {
     chrome.storage.local.set({ purchaseCompleted: true });
-    sendEvent("purchase_completed", {
-      ...productInfo,
-      status: "success",
-      quantity: 1
-    });
-    return;
+    return trackEvent("purchase_completed", { status: "success", quantity: 1 });
+  }
+  if (text.includes("login") || text.includes("log in") || text.includes("connexion") || cls.includes("login")) {
+    return trackEvent("login", { method: "unknown", logged_in: true });
   }
 });
 
@@ -425,26 +302,15 @@ document.addEventListener("click", (e) => {
 // -------------------------
 document.addEventListener("submit", (e) => {
   updateSessionActivity();
-
   const form = e.target;
   if (!(form instanceof HTMLFormElement)) return;
 
-  const searchInput =
-    form.querySelector(
-      'input[type="search"], input[name*="search"], input[placeholder*="Search"], input[placeholder*="Recherche"]'
-    );
-
+  const searchInput = form.querySelector('input[type="search"], input[name*="search"], input[placeholder*="Search"], input[placeholder*="Recherche"]');
   if (searchInput && searchInput.value.trim()) {
-    sendEvent("search_performed", {
-      query: searchInput.value.trim().slice(0, 100)
-    });
-    return;
+    return sendEvent("search_performed", { query: searchInput.value.trim().slice(0, 100) });
   }
 
-  sendEvent("form_submitted", {
-    form_name: form.getAttribute("name") || form.getAttribute("id") || "unknown",
-    form_action: form.getAttribute("action") || null
-  });
+  sendEvent("form_submitted", { form_name: form.getAttribute("name") || form.getAttribute("id") || "unknown", form_action: form.getAttribute("action") || null });
 });
 
 // -------------------------
@@ -452,24 +318,18 @@ document.addEventListener("submit", (e) => {
 // -------------------------
 window.addEventListener("scroll", () => {
   if (!isExtensionValid()) return;
-
   const now = Date.now();
   if (now - lastScrollTrackedAt < 500) return;
   lastScrollTrackedAt = now;
 
   updateSessionActivity();
-
   const total = document.documentElement.scrollHeight - window.innerHeight;
   if (total <= 0) return;
 
   const depth = Math.round((window.scrollY / total) * 100);
-
   if (depth >= maxScroll + 25) {
     maxScroll = depth;
-
-    sendEvent("scroll_depth", {
-      depth_pct: depth
-    });
+    sendEvent("scroll_depth", { depth_pct: depth });
   }
 });
 
@@ -482,29 +342,17 @@ window.addEventListener("beforeunload", () => {
   const timeOnPageSec = Math.round((Date.now() - pageStart) / 1000);
   const pageType = detectPageType();
 
-  chrome.storage.local.get(
-    ["addedToCart", "checkoutStarted", "purchaseCompleted"],
-    (data) => {
-      const addedToCart = !!data.addedToCart;
-      const checkoutStarted = !!data.checkoutStarted;
-      const purchaseCompleted = !!data.purchaseCompleted;
+  chrome.storage.local.get(["addedToCart", "checkoutStarted", "purchaseCompleted"], (data) => {
+    const addedToCart = !!data.addedToCart;
+    const checkoutStarted = !!data.checkoutStarted;
+    const purchaseCompleted = !!data.purchaseCompleted;
 
-      if (!purchaseCompleted && checkoutStarted && pageType === "checkout") {
-        sendEvent("checkout_abandon", {
-          abandon_reason: "exit_before_purchase"
-        });
-      } else if (!purchaseCompleted && addedToCart && pageType === "cart") {
-        sendEvent("cart_abandon", {
-          abandon_reason: "exit_with_cart"
-        });
-      }
-
-      sendEvent("page_engagement", {
-        time_on_page_sec: timeOnPageSec,
-        max_scroll_pct: maxScroll,
-        click_count: clickCount,
-        is_bounce: clickCount === 0 && maxScroll < 25 && timeOnPageSec < 15
-      });
+    if (!purchaseCompleted && checkoutStarted && pageType === "checkout") {
+      sendEvent("checkout_abandon", { abandon_reason: "exit_before_purchase" });
+    } else if (!purchaseCompleted && addedToCart && pageType === "cart") {
+      sendEvent("cart_abandon", { abandon_reason: "exit_with_cart" });
     }
-  );
+
+    sendEvent("page_engagement", { time_on_page_sec: timeOnPageSec, max_scroll_pct: maxScroll, click_count: clickCount, is_bounce: clickCount === 0 && maxScroll < 25 && timeOnPageSec < 15 });
+  });
 });

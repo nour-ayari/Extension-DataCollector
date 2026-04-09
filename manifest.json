@@ -5,6 +5,7 @@
   "description": "Collecte anonyme de comportements e-commerce",
   "permissions": ["storage", "tabs", "scripting"],
   "host_permissions": [
+    "https://*.dataplane.rudderstack.com/*",
     "https://*.amazon.fr/*",
     "https://*.drest.tn/*",
     "https://*.aliexpress.com/*",
