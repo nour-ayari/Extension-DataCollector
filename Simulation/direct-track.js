@@ -1,9 +1,11 @@
 // bot/direct-track-random.js
 import { faker } from '@faker-js/faker';
 
-const WRITE_KEY = '3BUtbTh9soOiwYrYVRjE954Bisl';
-const DATAPLANE = "https://isticnourfrvzz.dataplane.rudderstack.com";
+const WRITE_KEY = '3BtgnG9O19EIKEJptG1h4k9Nps6';
+const DATAPLANE = "https://insatrefkarbfv.dataplane.rudderstack.com";
 const AUTH      = 'Basic ' + Buffer.from(WRITE_KEY + ':').toString('base64');
+const LOOKBACK_DAYS = Number(process.env.LOOKBACK_DAYS ?? 0);
+const TOTAL = Number(process.env.TOTAL ?? 300);
 
 // ── Pool d'users récurrents (70% des sessions) ───────────────────────────
 const USER_POOL = Array.from({ length: 100 }, () => ({
@@ -89,7 +91,7 @@ function randomTimestamp() {
     if (r < cumul) { hour = h; break; }
   }
   const d = new Date();
-  d.setDate(d.getDate() - faker.number.int({ min: 0, max: 60 }));
+  d.setDate(d.getDate() - faker.number.int({ min: 0, max: Math.max(0, LOOKBACK_DAYS) }));
   d.setHours(hour, faker.number.int({min:0,max:59}), faker.number.int({min:0,max:59}), 0);
   return d.toISOString();
 }
@@ -383,10 +385,8 @@ const SITES = [
   'https://www.aliexpress.com',
 ];
 
-const TOTAL = 300;
-
 (async () => {
-  console.log(`🚀 Generating ${TOTAL} random sessions...\n`);
+  console.log(`🚀 Generating ${TOTAL} random sessions (LOOKBACK_DAYS=${LOOKBACK_DAYS})...\n`);
 
   for (let i = 0; i < TOTAL; i++) {
     // 70% user récurrent du pool, 30% nouveau visiteur
