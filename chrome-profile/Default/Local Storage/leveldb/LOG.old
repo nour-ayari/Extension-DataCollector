@@ -1,7 +1,0 @@
-2026/04/04-15:01:58.470 43b8 Reusing MANIFEST C:\Users\Nour\Desktop\Extension\chrome-profile\Default\Local Storage\leveldb/MANIFEST-000001
-2026/04/04-15:01:58.478 43b8 Recovering log #4
-2026/04/04-15:01:58.479 43b8 Level-0 table #6: started
-2026/04/04-15:01:58.511 43b8 Level-0 table #6: 131093 bytes OK
-2026/04/04-15:01:58.511 43b8 Recovering log #5
-2026/04/04-15:01:58.513 43b8 Reusing old log C:\Users\Nour\Desktop\Extension\chrome-profile\Default\Local Storage\leveldb/000005.log 
-2026/04/04-15:01:58.518 43b8 Delete type=0 #4
