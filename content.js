@@ -353,6 +353,6 @@ window.addEventListener("beforeunload", () => {
       sendEvent("cart_abandon", { abandon_reason: "exit_with_cart" });
     }
 
-    sendEvent("page_engagement", { time_on_page_sec: timeOnPageSec, max_scroll_pct: maxScroll, click_count: clickCount, is_bounce: clickCount === 0 && maxScroll < 25 && timeOnPageSec < 15 });
+    sendEvent("page_engagement", { duration: timeOnPageSec, max_scroll_pct: maxScroll, click_count: clickCount, is_bounce: clickCount === 0 && maxScroll < 25 && timeOnPageSec < 15 });
   });
 });
