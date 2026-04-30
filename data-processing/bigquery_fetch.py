@@ -21,26 +21,16 @@ GA4_LIMIT = int(os.environ.get("GA4_LIMIT", "1000000"))
 
 QUERY = f"""
 SELECT
-  user_pseudo_id AS client_id,
-  CAST((SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') AS STRING) AS session_id,
-  event_name AS event_type,
-  TIMESTAMP_MICROS(event_timestamp) AS timestamp,
-  geo.region AS region,
-  geo.country AS country,
-  device.category AS device,
-  ecommerce.purchase_revenue AS revenue,
-  traffic_source.source AS ed_action_source,
-  -- map common event_params to ed_ prefixed columns so BigQuery rows match Supabase flattened shape
-  (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_type') AS ed_page_type,
-  (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'click_count') AS ed_click_count,
-  (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'max_scroll_pct') AS ed_max_scroll_pct,
-  (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'action_location') AS ed_action_location,
-  (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'funnel_stage') AS ed_funnel_stage,
-  (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'product_id') AS ed_product_id,
-  (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'product_name') AS ed_product_name,
-  (SELECT value.double_value FROM UNNEST(event_params) WHERE key = 'price') AS ed_price,
-  (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'quantity') AS ed_quantity,
-  (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'session_engaged') AS logged_in
+  COALESCE(user_id, user_pseudo_id) AS client_id,
+  event_name,
+  event_timestamp,
+  event_params,
+  geo.region        AS region,
+  geo.country       AS country,
+  device.category   AS device,
+  traffic_source.source AS traffic_source,
+  ecommerce.purchase_revenue AS purchase_revenue,
+  items
 FROM
   `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*`
 WHERE
@@ -50,29 +40,14 @@ LIMIT {GA4_LIMIT}
 
 
 def fetch_ga4() -> pd.DataFrame:
+  from normalize_ga4 import normalize_ga4_df
   client = bigquery.Client(project=PROJECT_ID)
-  df = client.query(QUERY).to_dataframe()
-  df = df.rename(columns={
-    'ed_action_source': 'ed_action_source'
-  })
-
-  df['source'] = 'bigquery_ga4'
-  expected = [
-    'client_id','session_id','event_type','timestamp','duration','logged_in','device','region',
-    'ed_click_count','ed_max_scroll_pct','ed_action_source','ed_page_type',
-    'orders','revenue','cart_abandoned','nb_visits','pps_page_views',
-    'sequence','is_bounce','age','gender','source','rfm_score','conversion_score'
-  ]
-  for col in expected:
-    if col not in df.columns:
-      df[col] = None
-  df['ed_click_count'] = pd.to_numeric(df['ed_click_count'], errors='coerce')
-  df['ed_max_scroll_pct'] = pd.to_numeric(df['ed_max_scroll_pct'], errors='coerce')
-  df['ed_price'] = pd.to_numeric(df.get('ed_price'), errors='coerce')
-  df['ed_quantity'] = pd.to_numeric(df.get('ed_quantity'), errors='coerce')
-  df['revenue'] = pd.to_numeric(df.get('revenue'), errors='coerce').fillna(0)
-
-  return df
+  print(f"[bigquery] Sending query (limit={GA4_LIMIT:,}) ...")
+  job = client.query(QUERY)
+  print("[bigquery] Query submitted, waiting for results ...")
+  raw = job.to_dataframe()
+  print(f"[bigquery] Fetched {len(raw):,} rows. Normalizing ...")
+  return normalize_ga4_df(raw)
 
 
 def create_supabase_client():
@@ -84,8 +59,6 @@ def create_supabase_client():
 def fetch_supabase_events(table: str = "events") -> pd.DataFrame:
   supabase = create_supabase_client()
   resp = supabase.table(table).select("*").execute()
-
-  # Handle different return shapes from supabase client versions
   data = None
   try:
     if hasattr(resp, "data"):
@@ -150,7 +123,7 @@ SEQUENCES = [
 ]
 
 
-def make_user(i):
+def make_user(_):
   uid = f"synth_{uuid.uuid4().hex[:12]}"
   age = int(np.random.normal(35, 10))
   age = max(18, min(70, age))
@@ -267,29 +240,20 @@ def upsert_rfm_to_supabase(rfm_df: pd.DataFrame, table: str = "rfm_scores", batc
     return
   supabase = create_supabase_client()
   records = rfm_df.to_dict(orient="records")
-
   def _sanitize_value(v, key=None):
-    # unwrap numpy scalars
     try:
       if isinstance(v, np.generic):
         v = v.item()
     except Exception:
       pass
-
-    # convert floats and guard NaN/inf
     if isinstance(v, float):
       if not math.isfinite(v):
         return None
-      # monetary rounding
       if key == "monetary":
         return round(v, 2)
       return v
-
-    # ints -> python int
     if isinstance(v, (np.integer,)):
       return int(v)
-
-    # leave bool, None, str as is
     return v
 
   for rec in records:
@@ -300,7 +264,6 @@ def upsert_rfm_to_supabase(rfm_df: pd.DataFrame, table: str = "rfm_scores", batc
       supabase.table(table).upsert(records[i:i+batch]).execute()
       print(f"Upserted RFM rows {i} to {i+len(records[i:i+batch])}")
     except Exception as e:
-      # Likely the table does not exist in Supabase schema
       print(f"Failed to upsert RFM rows: {e}")
       print("")
       print("It looks like the target table does not exist in Supabase. Create it with the SQL below in the Supabase SQL editor:")
