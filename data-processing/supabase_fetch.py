@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Any, Dict
 import pandas as pd
@@ -44,10 +45,20 @@ def fetch_supabase_events(table: str = "events") -> pd.DataFrame:
 def flatten_supabase(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
+    def parse_json_if_needed(value):
+        if isinstance(value, dict) or isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except Exception:
+                return {}
+        return {}
+
     def safe_flatten(df_local: pd.DataFrame, col: str, prefix: str) -> pd.DataFrame:
         if col not in df_local.columns:
             return df_local
-        expanded = df_local[col].apply(lambda x: x if isinstance(x, dict) else {})
+        expanded = df_local[col].apply(parse_json_if_needed).apply(lambda x: x if isinstance(x, dict) else {})
         flat = pd.json_normalize(expanded)
         if flat.empty:
             df_local = df_local.drop(columns=[col])
@@ -56,7 +67,11 @@ def flatten_supabase(df: pd.DataFrame) -> pd.DataFrame:
         return pd.concat([df_local.drop(columns=[col]), flat], axis=1)
 
     df = safe_flatten(df, "event_description", "ed")
-    df = safe_flatten(df, "pages_per_session", "pps")
+
+    if "pages_per_session" in df.columns:
+        pps_parsed = df["pages_per_session"].apply(parse_json_if_needed)
+        df["pps_page_views"] = pps_parsed.apply(lambda x: len(x) if isinstance(x, list) else 0)
+        df = df.drop(columns=["pages_per_session"])
 
     # compute revenue from nested fields if present
     price = df.get("ed_price", pd.Series(0, index=df.index))
