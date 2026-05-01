@@ -21,7 +21,8 @@ per-user `user_features` table for modelling.
 
 ```bash
 python -m venv env
-source env/bin/activate   # or .\env\Scripts\Activate.ps1 on Windows
+source env/bin/activate 
+
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
@@ -125,10 +126,3 @@ CREATE TABLE IF NOT EXISTS public.user_features (
 - If Supabase upserts fail: ensure `SUPABASE_KEY` has proper privileges and target tables exist.
 - The scripts sanitize timestamps and numpy types before upsert; inspect `merged_events.csv`
   for a local snapshot.
-
-**Extras I can add**
-- `requirements.txt` and a `run.ps1`/`run.sh` helper
-- CLI flags for `merge.py` (`--skip-ga4`, `--only-supabase`, `--push/--no-push`)
-- A small verification script to show one canonical row side-by-side from BigQuery and Supabase
-
-If you want, I can add `requirements.txt` and the verification script now.

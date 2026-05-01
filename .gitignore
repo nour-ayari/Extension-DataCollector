@@ -20,3 +20,6 @@ chrome-profile/
 # OS files
 .DS_Store
 Thumbs.db
+data/
+data/events_cleaned.csv 
+**/**.csv
