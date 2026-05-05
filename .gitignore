@@ -1,1 +1,25 @@
 node_modules/
+**/node_modules/
+
+# Chrome profile data (contains sensitive browser data)
+chrome-profile/
+
+# Python virtual environments
+**/env/
+**/.venv/
+**/__pycache__/
+*.pyc
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+data/
+data/events_cleaned.csv 
+**/**.csv
