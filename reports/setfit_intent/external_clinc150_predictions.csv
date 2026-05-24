@@ -1,0 +1,121 @@
+text,intent,intent_name,mapped_intent,y_true,y_pred
+bob is my name now,144,change_user_name,change_account,change_account,create_account
+please start calling me bob,144,change_user_name,change_account,change_account,contact_human_agent
+change my name to bob,144,change_user_name,change_account,change_account,change_account
+call me bob from now on,144,change_user_name,change_account,change_account,contact_human_agent
+don't call me bill anymore - call me bob,144,change_user_name,change_account,change_account,request_invoice
+i want you to call me bailey,144,change_user_name,change_account,change_account,contact_human_agent
+don't call me anything besides bailey,144,change_user_name,change_account,change_account,contact_human_agent
+refer to me as bailey,144,change_user_name,change_account,change_account,create_account
+"address me as ""bailey",144,change_user_name,change_account,change_account,create_account
+please call me bailey,144,change_user_name,change_account,change_account,contact_human_agent
+can you call me a different name,144,change_user_name,change_account,change_account,create_account
+could you call me a different name,144,change_user_name,change_account,change_account,create_account
+"could you call me a different name, please",144,change_user_name,change_account,change_account,create_account
+"could you call me by a different name, please",144,change_user_name,change_account,change_account,create_account
+"can you call me a different name, please",144,change_user_name,change_account,change_account,create_account
+"ai, my name is deb please use my name when you talk to me",144,change_user_name,change_account,change_account,create_account
+ai answer my questions with my name first which is deb,144,change_user_name,change_account,change_account,create_account
+"ai, refer to me as deb when answering me",144,change_user_name,change_account,change_account,contact_human_agent
+"ai, address me as deb when speaking to me",144,change_user_name,change_account,change_account,contact_human_agent
+"ai, call me deb",144,change_user_name,change_account,change_account,contact_human_agent
+change my name please,144,change_user_name,change_account,change_account,change_account
+please go ahead and change my name,144,change_user_name,change_account,change_account,change_account
+please switch my name,144,change_user_name,change_account,change_account,change_account
+change name for me,144,change_user_name,change_account,change_account,change_account
+my name is going to be sherlock,144,change_user_name,change_account,change_account,create_account
+start calling me jake from now on,144,change_user_name,change_account,change_account,contact_human_agent
+call me shane,144,change_user_name,change_account,change_account,contact_human_agent
+i want you to call me sheldon,144,change_user_name,change_account,change_account,contact_human_agent
+i want to be called timothy,144,change_user_name,change_account,change_account,contact_human_agent
+call me mike from now on,144,change_user_name,change_account,change_account,contact_human_agent
+where is my order now,84,order_status,track_order,track_order,track_order
+tell me all updates about my order's status,84,order_status,track_order,track_order,track_order
+is my order on its way or what's going on,84,order_status,track_order,track_order,track_order
+how is my order doing right now,84,order_status,track_order,track_order,track_order
+locate my package,84,order_status,track_order,track_order,track_delivery
+can you monitor my package's progress,84,order_status,track_order,track_order,track_order
+track my order,84,order_status,track_order,track_order,track_order
+tell me where my package is currently,84,order_status,track_order,track_order,track_order
+where is my package en route,84,order_status,track_order,track_order,track_delivery
+give me the status of my order,84,order_status,track_order,track_order,track_order
+when will i get my order,84,order_status,track_order,track_order,track_order
+tell me where my order is,84,order_status,track_order,track_order,track_order
+what is the status of the order i placed with you yesterday,84,order_status,track_order,track_order,track_order
+what's the updated status of my order,84,order_status,track_order,track_order,track_order
+can you help with delivery tracking,84,order_status,track_order,track_order,track_delivery
+i need a delivery tracked,84,order_status,track_order,track_order,track_delivery
+i need to track my order,84,order_status,track_order,track_order,track_order
+i placed an order and i need it tracked,84,order_status,track_order,track_order,track_order
+could you track an order for me,84,order_status,track_order,track_order,track_order
+has my package been sent,84,order_status,track_order,track_order,track_delivery
+what time is my package getting here,84,order_status,track_order,track_order,delivery_time
+how's my amazon order doing,84,order_status,track_order,track_order,track_order
+i need to track a package,84,order_status,track_order,track_order,track_delivery
+i want to track a package i should be getting,84,order_status,track_order,track_order,track_delivery
+please track my order,84,order_status,track_order,track_order,track_order
+can you tell me when my item will get here,84,order_status,track_order,track_order,delivery_time
+can you tell me where my item is,84,order_status,track_order,track_order,track_delivery
+what's up with my order,84,order_status,track_order,track_order,change_order
+are they any updates on my order,84,order_status,track_order,track_order,change_order
+i need to track the status of my order,84,order_status,track_order,track_order,track_order
+stop what you're doing,147,cancel,cancel_order,cancel_order,cancel_order
+this process needs to stop,147,cancel,cancel_order,cancel_order,delete_account
+stop this process,147,cancel,cancel_order,cancel_order,cancel_order
+"that was a mistake, undo that",147,cancel,cancel_order,cancel_order,wrong_item
+ignore the previous command,147,cancel,cancel_order,cancel_order,cancel_order
+forget what i told you to do,147,cancel,cancel_order,cancel_order,wrong_item
+please cancel the last input,147,cancel,cancel_order,cancel_order,cancel_order
+please stop the current process,147,cancel,cancel_order,cancel_order,cancel_order
+can you end the current process,147,cancel,cancel_order,cancel_order,delete_account
+just stop talking,147,cancel,cancel_order,cancel_order,delete_account
+please stop talking,147,cancel,cancel_order,cancel_order,delete_account
+"stop, just stop",147,cancel,cancel_order,cancel_order,cancel_order
+you can stop talking ai,147,cancel,cancel_order,cancel_order,contact_human_agent
+stop the process,147,cancel,cancel_order,cancel_order,cancel_order
+can you turn off the process,147,cancel,cancel_order,cancel_order,cancel_order
+stop talking,147,cancel,cancel_order,cancel_order,cancel_order
+you can cancel the task,147,cancel,cancel_order,cancel_order,cancel_order
+can you cancel that,147,cancel,cancel_order,cancel_order,cancel_order
+can you cancel that request,147,cancel,cancel_order,cancel_order,cancel_order
+"could you cancel that request, please",147,cancel,cancel_order,cancel_order,cancel_order
+"can you cancel that request, please",147,cancel,cancel_order,cancel_order,cancel_order
+"can you cancel that, please",147,cancel,cancel_order,cancel_order,cancel_order
+hush,147,cancel,cancel_order,cancel_order,cancel_order
+be quiet,147,cancel,cancel_order,cancel_order,change_account
+stop it now!,147,cancel,cancel_order,cancel_order,cancel_order
+stop talking you are annoying,147,cancel,cancel_order,cancel_order,submit_feedback
+you need to shut it,147,cancel,cancel_order,cancel_order,delete_account
+stop processing,147,cancel,cancel_order,cancel_order,cancel_order
+abort mission,147,cancel,cancel_order,cancel_order,cancel_order
+stop speaking,147,cancel,cancel_order,cancel_order,delete_account
+does my shopping list have pop tarts,43,shopping_list,product_information,product_information,product_information
+can you check to see if my shopping list already has milk,43,shopping_list,product_information,product_information,availability
+did i remember to put oatmeal on my list,43,shopping_list,product_information,product_information,add_product
+iterate over the items on my grocery list,43,shopping_list,product_information,product_information,add_product
+tell me what i have on my shopping list,43,shopping_list,product_information,product_information,add_product
+do i have twinkies on the grocery list,43,shopping_list,product_information,product_information,add_product
+have i already got eggs down on the shopping list,43,shopping_list,product_information,product_information,add_product
+recite the items i'm planning to purchase,43,shopping_list,product_information,product_information,submit_product_idea
+what do i currently have on my shopping list,43,shopping_list,product_information,product_information,track_order
+what's on my to-buy list,43,shopping_list,product_information,product_information,track_order
+what's on my purchase list,43,shopping_list,product_information,product_information,track_order
+do i have to buy milk,43,shopping_list,product_information,product_information,remove_product
+is milk on my shopping list,43,shopping_list,product_information,product_information,add_product
+is milk one of my shopping list items,43,shopping_list,product_information,product_information,add_product
+am i supposed to buy milk,43,shopping_list,product_information,product_information,remove_product
+is milk one of the things i need to buy,43,shopping_list,product_information,product_information,product_information
+tell me what's is on my shopping list,43,shopping_list,product_information,product_information,track_order
+please read my shopping list,43,shopping_list,product_information,product_information,track_order
+did you put carrots on the shopping list,43,shopping_list,product_information,product_information,add_product
+does the shopping list have apples on it,43,shopping_list,product_information,product_information,product_information
+are carrots added to the grocery list,43,shopping_list,product_information,product_information,add_product
+is garlic on my grocery list,43,shopping_list,product_information,product_information,add_product
+did carrots get on my shopping list,43,shopping_list,product_information,product_information,add_product
+what things are on my shopping list today,43,shopping_list,product_information,product_information,track_order
+tell me the items in my shopping list,43,shopping_list,product_information,product_information,add_product
+what does my shopping list contain,43,shopping_list,product_information,product_information,add_product
+i need to know what's on my shopping list,43,shopping_list,product_information,product_information,track_order
+what is on the shopping list,43,shopping_list,product_information,product_information,add_product
+please let me know what is on my shopping list,43,shopping_list,product_information,product_information,track_order
+let me know what's on my shopping list,43,shopping_list,product_information,product_information,track_order

@@ -1,0 +1,7 @@
+source,before,after,rejected,kept_rate
+bitext_retail,44884,44884,0,1.0
+bitext_support,26872,17959,8913,0.6683
+synthetic_ecommerce,861,288,573,0.3345
+faq_intents,394,137,257,0.3477
+amazon_single_qna,422635,422635,0,1.0
+amazon_multi_questions,52437,52437,0,1.0
