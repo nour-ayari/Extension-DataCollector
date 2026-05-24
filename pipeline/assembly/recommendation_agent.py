@@ -19,6 +19,7 @@ if str(ROOT_DIR) not in sys.path:
 from pipeline.agent3.decision_matrix import lookup, ActionTemplate
 from pipeline.agent3.rag_engine import generate_recommendation
 from pipeline.agent3.rag_context import from_user_meta
+from pipeline.agent3.rag_retrieval import rerank
 from pipeline.agent3.vector_store import search_similar_cases, log_recommendation, upsert_case
 
 load_dotenv()
@@ -60,6 +61,8 @@ class AgentOutput:
     confidence:      float
     log_id:          int
     retrieved_k:     int
+    context_narrative: str
+    context_compact: str
 
 
 def _build_behavioral_context(user_meta: Optional[dict]) -> str:
@@ -102,14 +105,22 @@ def run(inp: AgentInput) -> AgentOutput:
     """
     action_template: ActionTemplate = lookup(inp.persona, inp.sentiment)
     user_context = from_user_meta(inp.user_meta, persona=inp.persona, sentiment=inp.sentiment, confidence=inp.confidence)
+    context_narrative = user_context.render_narrative()
+    context_compact = user_context.render_compact()
 
-    retrieved_cases = search_similar_cases(
+    retrieved_candidates = search_similar_cases(
         persona            = inp.persona,
         sentiment          = inp.sentiment,
         behavioral_context = user_context,
-        top_k              = TOP_K,
+        top_k              = TOP_K + 3,
         only_converted     = False,
         filter_persona     = True,
+    )
+
+    retrieved_cases = rerank(
+        retrieved_candidates,
+        top_k=TOP_K,
+        churn_risk=user_context.churn_risk,
     )
 
     raw: dict = generate_recommendation(
@@ -159,6 +170,8 @@ def run(inp: AgentInput) -> AgentOutput:
         confidence      = inp.confidence,
         log_id          = log_id,
         retrieved_k     = len(retrieved_cases),
+        context_narrative = context_narrative,
+        context_compact   = context_compact,
     )
 
 

@@ -83,6 +83,7 @@ META_COLUMNS = [
     "device_mode", "preferred_source",
     "r_score", "f_score", "m_score", "rfm_score",
     "behaviour_score", "intent_score", "context_score", "final_score",
+    "intent", "churn_risk",
 ]
 
 def _build_user_meta(row: pd.Series) -> dict:

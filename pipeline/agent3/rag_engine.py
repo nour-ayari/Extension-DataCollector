@@ -1,20 +1,20 @@
-"""
-rag_engine.py — RAG core for Agent 3
-No product catalogue: behavioral_context replaces products as the grounding signal.
-
-Flow: (pu, σu, behavioral_context) → prompt assembly → LLM → r̂u
-"""
+"""RAG core for Agent 3."""
 
 from __future__ import annotations
-import json, os
+import json
+import os
+import logging
 from typing import Optional
 from dotenv import load_dotenv
 from openai import OpenAI
-from decision_matrix import ActionTemplate
+from pipeline.agent3.decision_matrix import ActionTemplate
 
-from rag_context import UserContext, from_user_meta
+from pipeline.agent3.rag_context import UserContext, from_user_meta
+from pipeline.agent3.rag_retrieval import format_for_prompt
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 def _get_llm() -> OpenAI:
@@ -25,50 +25,51 @@ def _get_llm() -> OpenAI:
 
 
 SYSTEM_PROMPT = """You are an e-commerce conversion optimization advisor embedded in an admin dashboard.
-You receive behavioral signals about a user (funnel depth, scroll, bounce rate, purchase history, etc.)
-and must generate a CONCRETE, SPECIFIC admin action to maximize conversion.
+You receive behavioral signals about a user and must generate a concrete admin action to maximize conversion.
 
-You have NO product catalogue — personalize based on behavioral patterns only.
+Rules:
+- No product catalogue is available.
+- If churn risk is high, lead with empathy and consider a more generous offer.
+- If intent is complaint, acknowledge frustration before the offer.
+- If intent is product_information, answer the question first, then nudge toward conversion.
+- If intent is track_refund, address the concern first, then propose a retention action.
 
 Always respond with valid JSON only — no markdown, no preamble.
 Schema:
 {
-  "action_type":    "<string>",
-  "channel":        "<email | overlay | chatbot | alert | sms>",
-  "subject_line":   "<compelling subject for email, or headline for overlay>",
-  "body_copy":      "<main message, 2-4 sentences>",
-  "cta":            "<call-to-action button label>",
-  "trigger_cond":   "<exact technical trigger condition>",
-  "urgency":        "<low | medium | high | critical>",
-  "personalization": {
-    "behavioral_hook": "<1 specific insight from user behavior, e.g. 'reached checkout 3x without buying'>",
-    "discount_pct":    "<int or null>",
-    "tone":            "<reassuring | urgent | exclusive | friendly>"
-  },
-  "rationale": "<1 sentence — why this action for this behavioral profile>"
+    "action_type": "<string>",
+    "channel": "<email | overlay | chatbot | alert | sms>",
+    "subject_line": "<compelling subject for email, or headline for overlay>",
+    "body_copy": "<main message, 2-4 sentences>",
+    "cta": "<call-to-action button label>",
+    "trigger_cond": "<exact technical trigger condition>",
+    "urgency": "<low | medium | high | critical>",
+    "personalization": {
+        "behavioral_hook": "<1 specific insight from user behavior>",
+        "discount_pct": "<int or null>",
+        "tone": "<reassuring | urgent | exclusive | friendly>"
+    },
+    "rationale": "<1 sentence — why this action for this behavioral profile>"
 }"""
 
 
 def _format_retrieved_cases(cases: list[dict]) -> str:
-    if not cases:
-        return "No similar past cases — generate a fresh recommendation."
-    lines = []
-    for i, c in enumerate(cases, 1):
-        outcome = "✓ converted" if c.get("converted") else "✗ no conversion"
-        sim = c.get("similarity", 0)
-        ctx = c.get("context", "")
-        lines.append(
-            f"Case {i} (sim={sim:.2f}, {outcome}): "
-            f"persona={c['persona']}, sentiment={c['sentiment']}, "
-            f"action={c['action_type']} — \"{c.get('action_detail','')}\" | ctx: {ctx}"
-        )
-    return "\n".join(lines)
+    return format_for_prompt(cases)
 
 
 def _format_user_context(user_context: Optional[UserContext]) -> str:
     if not user_context:
         return "No user metadata available."
-    return user_context.render_narrative()
+    return user_context.render_for_llm_prompt()
+
+
+def _format_user_meta(user_meta: Optional[dict]) -> str:
+    if not user_meta:
+        return "No user metadata available."
+    lines = ["=== User metadata ==="]
+    for key in sorted(user_meta.keys()):
+        lines.append(f"{key}: {user_meta[key]}")
+    return "\n".join(lines)
 
 
 def _fallback_recommendation(
@@ -81,10 +82,7 @@ def _fallback_recommendation(
     user_context: Optional[UserContext] = None,
 ) -> dict:
     """Deterministic backup used when the LLM cannot be called."""
-    behavioral_hook = (user_context.render_compact() if user_context else behavioral_context) or "strong engagement signal"
-    if user_context and user_context.max_funnel_depth is not None:
-        behavioral_hook = f"reached funnel depth {user_context.max_funnel_depth}"
-
+    behavioral_hook = (user_context.render_compact() if user_context else behavioral_context) or ""
     if action_template.urgency in {"high", "critical"} or sentiment == "Negative":
         discount_pct = 15 if action_template.urgency == "critical" else 10
     else:
@@ -102,10 +100,7 @@ def _fallback_recommendation(
         "action_type": action_template.action_type,
         "channel": action_template.channel,
         "subject_line": subject_line,
-        "body_copy": (
-            f"This action is based on the user's {persona.lower()} profile and {sentiment.lower()} sentiment. "
-            f"Use the rule prior: {action_template.description}. Trigger it when {action_template.trigger_cond}."
-        ),
+        "body_copy": action_template.description,
         "cta": {
             "email": "Open offer",
             "overlay": "Claim now",
@@ -118,12 +113,12 @@ def _fallback_recommendation(
         "personalization": {
             "behavioral_hook": behavioral_hook,
             "discount_pct": discount_pct,
-            "tone": "urgent" if action_template.urgency in {"high", "critical"} else "friendly",
+            "tone": "urgent" if action_template.urgency in {"high", "critical"} else "neutral",
         },
         "rationale": (
-            f"Fallback recommendation generated locally because the LLM was unavailable. "
-            f"It still follows the {persona}/{sentiment} rule prior and {len(retrieved_cases)} retrieved case(s)."
+            f"Fallback: LLM unavailable. Rule: {action_template.action_type}."
         ),
+        "_fallback": True,
     }
 
 
@@ -134,8 +129,9 @@ def assemble_prompt(
     action_template:    ActionTemplate,
     retrieved_cases:    list[dict],
     user_context:       Optional[UserContext] = None,
+    user_meta:          Optional[dict] = None,
 ) -> str:
-    narrative = _format_user_context(user_context)
+    narrative = _format_user_context(user_context) if user_context else _format_user_meta(user_meta)
     compact = user_context.render_compact() if user_context else "N/A"
     return f"""=== USER SIGNAL ===
 Persona:    {persona}
@@ -185,6 +181,7 @@ def generate_recommendation(
         persona, sentiment, confidence,
         action_template, retrieved_cases,
         user_context,
+        user_meta,
     )
 
     try:
@@ -205,7 +202,8 @@ def generate_recommendation(
         except json.JSONDecodeError:
             cleaned = raw.strip().removeprefix("```json").removesuffix("```").strip()
             result  = json.loads(cleaned)
-    except Exception:
+    except Exception as exc:
+        logger.warning("Agent 3 LLM fallback triggered: %s", exc)
         result = _fallback_recommendation(
             persona,
             sentiment,

@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 from supabase import Client, create_client
 
-from rag_context import UserContext
+from pipeline.agent3.rag_context import UserContext
 
 load_dotenv()
 
@@ -59,6 +59,7 @@ def build_case_text(
     sentiment: str,
     action_type: str = "",
     context: str | UserContext = "",
+    converted: Optional[bool] = None,
 ) -> str:
     """
     Canonical text representation of an intervention case.
@@ -66,7 +67,7 @@ def build_case_text(
     No product catalogue: context can be a behavioral summary string or a structured UserContext.
     """
     if isinstance(context, UserContext):
-        context = context.render_narrative()
+        context = context.render_with_action(action_type, converted) if action_type else context.render_narrative()
     return f"persona:{persona} sentiment:{sentiment} action:{action_type} context:{context}"
 
 
@@ -85,7 +86,7 @@ def upsert_case(
     behavioral_context is a compact string of key user metrics (no product catalogue needed).
     """
     client = _get_client()
-    text = build_case_text(persona, sentiment, action_type, behavioral_context)
+    text = build_case_text(persona, sentiment, action_type, behavioral_context, converted=converted)
     context_text = behavioral_context.render_compact() if isinstance(behavioral_context, UserContext) else behavioral_context
     embedding = embed(text)
 
