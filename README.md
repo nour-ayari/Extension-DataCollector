@@ -29,6 +29,18 @@ Extension-DataCollector/
 ├── data/
 │   └── events_cleaned.csv
 │
+├── dashboard/          ← React dashboard (Vite + Tailwind)
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── OverviewPage.jsx
+│   │   │   ├── FeedbackPage.jsx
+│   │   │   └── SettingsPage.jsx
+│   │   ├── components/
+│   │   └── hooks/
+│   └── package.json
+│
+├── dashboard.html      ← Standalone HTML dashboard (no build step)
+│
 └── README.md
 
 ```
