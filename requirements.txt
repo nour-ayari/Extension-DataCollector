@@ -35,7 +35,6 @@ mmh3==5.2.1
 multidict==6.7.1
 numpy==2.4.4
 oauthlib==3.3.1
-openai
 packaging==26.2
 pandas==2.3.3
 pandas-gbq==0.35.0
@@ -59,6 +58,7 @@ pyroaring==1.1.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
 pytz==2026.1.post1
+datasets
 realtime==2.29.0
 requests==2.33.1
 requests-oauthlib==2.0.0

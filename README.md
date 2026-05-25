@@ -33,3 +33,15 @@ Extension-DataCollector/
 ```
 
 ---
+
+## Agent 3 LLM mode
+
+Agent 3 now runs in deterministic fallback mode by default. Optional local Ollama support can be enabled with environment variables:
+
+```env
+OLLAMA_ENABLED=false
+OLLAMA_MODEL=llama3
+OLLAMA_URL=http://localhost:11434
+```
+
+If Ollama is not running or the request fails, Agent 3 returns a valid recommendation JSON using its rule-based fallback.

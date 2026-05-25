@@ -5,8 +5,8 @@ import json
 import os
 import logging
 from typing import Optional
+import requests
 from dotenv import load_dotenv
-from openai import OpenAI
 from pipeline.agent3.decision_matrix import ActionTemplate
 
 from pipeline.agent3.rag_context import UserContext, from_user_meta
@@ -17,11 +17,39 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-def _get_llm() -> OpenAI:
-    return OpenAI(
-        api_key  = os.environ["OPENAI_API_KEY"],
-        base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-    )
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def generate_llm_response(prompt: str) -> Optional[str]:
+    """Return an Ollama response string when enabled, otherwise None."""
+    if not _env_flag("OLLAMA_ENABLED", False):
+        return None
+
+    ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434").rstrip("/")
+    model = os.getenv("OLLAMA_MODEL", "llama3")
+
+    try:
+        response = requests.post(
+            f"{ollama_url}/api/generate",
+            json={
+                "model": model,
+                "prompt": prompt,
+                "stream": False,
+                "format": "json",
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        text = payload.get("response")
+        return text if isinstance(text, str) and text.strip() else None
+    except Exception as exc:
+        logger.info("Agent 3 Ollama unavailable, using fallback: %s", exc)
+        return None
 
 
 SYSTEM_PROMPT = """You are an e-commerce conversion optimization advisor embedded in an admin dashboard.
@@ -72,21 +100,28 @@ def _format_user_meta(user_meta: Optional[dict]) -> str:
     return "\n".join(lines)
 
 
-def _fallback_recommendation(
-    persona: str,
-    sentiment: str,
-    confidence: float,
+def fallback_generate(
     action_template: ActionTemplate,
     retrieved_cases: list[dict],
-    behavioral_context: str,
-    user_context: Optional[UserContext] = None,
+    user_context: Optional[UserContext],
 ) -> dict:
     """Deterministic backup used when the LLM cannot be called."""
-    behavioral_hook = (user_context.render_compact() if user_context else behavioral_context) or ""
+    behavioral_hook = user_context.render_compact() if user_context else ""
+    persona = user_context.persona if user_context and user_context.persona else "User"
+    sentiment = user_context.sentiment if user_context and user_context.sentiment else "Neutral"
+
     if action_template.urgency in {"high", "critical"} or sentiment == "Negative":
         discount_pct = 15 if action_template.urgency == "critical" else 10
     else:
         discount_pct = None
+
+    if retrieved_cases:
+        converted_count = sum(1 for case in retrieved_cases if case.get("converted") is True)
+        case_hint = f"Based on {converted_count} converted similar cases."
+    else:
+        case_hint = "No similar cases available."
+
+    article = "an" if action_template.channel[:1].lower() in {"a", "e", "i", "o", "u"} else "a"
 
     subject_line = {
         "email": f"A tailored note for your {persona.lower()} journey",
@@ -96,11 +131,17 @@ def _fallback_recommendation(
         "sms": "A quick offer for you",
     }.get(action_template.channel, "A tailored recommendation")
 
+    body_copy = (
+        f"{action_template.description} "
+        f"{case_hint} "
+        f"We recommend {article} {action_template.channel} touchpoint to address this behavior."
+    ).strip()
+
     return {
         "action_type": action_template.action_type,
         "channel": action_template.channel,
         "subject_line": subject_line,
-        "body_copy": action_template.description,
+        "body_copy": body_copy,
         "cta": {
             "email": "Open offer",
             "overlay": "Claim now",
@@ -113,11 +154,9 @@ def _fallback_recommendation(
         "personalization": {
             "behavioral_hook": behavioral_hook,
             "discount_pct": discount_pct,
-            "tone": "urgent" if action_template.urgency in {"high", "critical"} else "neutral",
+            "tone": "urgent" if action_template.urgency in {"high", "critical"} else "friendly",
         },
-        "rationale": (
-            f"Fallback: LLM unavailable. Rule: {action_template.action_type}."
-        ),
+        "rationale": "deterministic fallback (no LLM available)",
         "_fallback": True,
     }
 
@@ -169,9 +208,6 @@ def generate_recommendation(
     user_meta:          Optional[dict] = None,
     user_context:       Optional[UserContext] = None,
 ) -> dict:
-    llm   = _get_llm()
-    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-
     if user_context is None and user_meta is not None:
         user_context = from_user_meta(user_meta, persona=persona, sentiment=sentiment, confidence=confidence)
     if user_context is None and isinstance(behavioral_context, UserContext):
@@ -184,35 +220,25 @@ def generate_recommendation(
         user_meta,
     )
 
-    try:
-        response = llm.chat.completions.create(
-            model           = model,
-            messages        = [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user",   "content": user_prompt},
-            ],
-            temperature     = 0.4,
-            max_tokens      = 600,
-            response_format = {"type": "json_object"},
+    llm_response = generate_llm_response(
+        prompt=(
+            f"{SYSTEM_PROMPT}\n\n"
+            f"{user_prompt}"
         )
+    )
 
-        raw = response.choices[0].message.content
+    if llm_response is None:
+        result = fallback_generate(action_template, retrieved_cases, user_context)
+    else:
         try:
-            result = json.loads(raw)
+            result = json.loads(llm_response)
         except json.JSONDecodeError:
-            cleaned = raw.strip().removeprefix("```json").removesuffix("```").strip()
-            result  = json.loads(cleaned)
-    except Exception as exc:
-        logger.warning("Agent 3 LLM fallback triggered: %s", exc)
-        result = _fallback_recommendation(
-            persona,
-            sentiment,
-            confidence,
-            action_template,
-            retrieved_cases,
-            behavioral_context if isinstance(behavioral_context, str) else "",
-            user_context,
-        )
+            cleaned = llm_response.strip().removeprefix("```json").removesuffix("```").strip()
+            try:
+                result = json.loads(cleaned)
+            except Exception as exc:
+                logger.warning("Agent 3 LLM response parse failed, using fallback: %s", exc)
+                result = fallback_generate(action_template, retrieved_cases, user_context)
 
     result["persona"]    = persona
     result["sentiment"]  = sentiment
