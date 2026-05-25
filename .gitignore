@@ -1,3 +1,4 @@
+
 # Python
 __pycache__/
 *.pyc
@@ -28,8 +29,25 @@ models/
 !config*.json   # garder configs utiles si léger
 !tokenizer*.json
 
+node_modules/
+**/node_modules/
+
+# Chrome profile data (contains sensitive browser data)
+chrome-profile/
+
+# Python virtual environments
+**/env/
+**/.venv/
+**/__pycache__/
+*.pyc
+
+# Environment variables
+.env
+.env.*
+
 # Logs
 *.log
+
 
 # OS
 .DS_Store
@@ -38,3 +56,11 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+data/
+data/events_cleaned.csv 
+**/**.csv
+

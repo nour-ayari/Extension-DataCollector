@@ -1,0 +1,61 @@
+{
+  "input_extension_payload": {
+    "anonymousId": "anon_1",
+    "client_id": "anon_1",
+    "session_id": "sess_1",
+    "event": "page_engagement",
+    "properties": {
+      "page_url": "https://shop.example.com/product/1",
+      "page_title": "Product 1",
+      "page_type": "product",
+      "device_category": "desktop",
+      "traffic_source": "organic",
+      "landing_page": "https://shop.example.com",
+      "timestamp": "2026-05-25T12:02:00Z",
+      "sequence": ["first_visit", "page_view", "page_engagement"],
+      "duration": 20,
+      "max_scroll_pct": 80,
+      "click_count": 6,
+      "is_bounce": false,
+      "nb_visits": 1,
+      "age": 0,
+      "gender": "unknown"
+    },
+    "context": {
+      "sessionId": "sess_1",
+      "device": {
+        "category": "desktop"
+      },
+      "page": {
+        "url": "https://shop.example.com/product/1",
+        "title": "Product 1"
+      }
+    },
+    "sentAt": "2026-05-25T12:02:00Z"
+  },
+  "canonical_schema_row": {
+    "client_id": "anon_1",
+    "session_id": "sess_1",
+    "timestamp": "2026-05-25T12:02:00Z",
+    "event_type": "page_engagement",
+    "sequence": ["first_visit", "page_view", "page_engagement"],
+    "duration": 20,
+    "ed_max_scroll_pct": 80,
+    "ed_click_count": 6,
+    "pps_page_views": 1,
+    "is_bounce": false,
+    "logged_in": false,
+    "deep_scroll": true,
+    "high_engagement": true,
+    "orders": 0,
+    "device": "desktop",
+    "ed_action_source": "organic",
+    "address": "https://shop.example.com/product/1",
+    "nb_visits": 1,
+    "age": 0,
+    "gender": "unknown",
+    "revenue": 0,
+    "ed_quantity": 1,
+    "ed_price": 0
+  }
+}

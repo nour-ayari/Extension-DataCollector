@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "name": "Data Collector",
+  "version": "1.0",
+  "description": "Collecte anonyme de comportements e-commerce",
+  "permissions": ["storage", "tabs", "scripting"],
+  "host_permissions": [
+    "https://*.dataplane.rudderstack.com/*",
+    "https://*.amazon.fr/*",
+    "https://*.drest.tn/*",
+    "https://*.aliexpress.com/*",
+    "https://*.mytek.tn/*",
+    "https://*.ebay.com/*",
+    "https://*.alibaba.com/*",
+    "https://*.walmart.com/*",
+    "https://*.jumia.com/*",
+    "https://*.jumia.tn/*",
+    "https://*.jumia.ma/*",
+    "https://*.jumia.dz/*",
+    "https://*.zalando.com/*",
+    "https://*.zalando.fr/*",
+    "https://*.zalando.de/*",
+    "https://*.zalando.co.uk/*",
+    "https://*.myshopify.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.amazon.fr/*",
+        "https://*.drest.tn/*",
+        "https://*.aliexpress.com/*",
+        "https://*.mytek.tn/*",
+        "https://*.ebay.com/*",
+        "https://*.alibaba.com/*",
+        "https://*.walmart.com/*",
+        "https://*.jumia.com/*",
+        "https://*.jumia.tn/*",
+        "https://*.jumia.ma/*",
+        "https://*.jumia.dz/*",
+        "https://*.zalando.com/*",
+        "https://*.zalando.fr/*",
+        "https://*.zalando.de/*",
+        "https://*.zalando.co.uk/*",
+        "https://*.myshopify.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["consent.html", "consent.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

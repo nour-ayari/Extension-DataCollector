@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent 3 — Recommendation Dashboard</title>
+<style>
+  :root {
+    --bg:       #0f0f10;
+    --surface:  #18181b;
+    --card:     #1f1f23;
+    --border:   rgba(255,255,255,0.08);
+    --text:     #f4f4f5;
+    --muted:    #71717a;
+    --accent:   #6366f1;
+    --accent2:  #22d3ee;
+    --success:  #22c55e;
+    --warn:     #f59e0b;
+    --danger:   #ef4444;
+    --font:     'DM Mono', 'Courier New', monospace;
+    --sans:     'DM Sans', system-ui, sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+  /* ── Layout ── */
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 24px 0; display: flex; flex-direction: column; }
+  .main { padding: 32px; overflow: auto; }
+
+  /* ── Sidebar ── */
+  .logo { padding: 0 20px 28px; border-bottom: 1px solid var(--border); }
+  .logo-tag { font-size: 10px; font-family: var(--font); color: var(--accent2); letter-spacing: 2px; text-transform: uppercase; }
+  .logo-title { font-size: 15px; font-weight: 600; margin-top: 4px; }
+  .nav { padding: 16px 8px; flex: 1; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; font-size: 13px; color: var(--muted); cursor: pointer; transition: all 0.15s; margin-bottom: 2px; }
+  .nav-item:hover, .nav-item.active { background: rgba(99,102,241,0.12); color: var(--text); }
+  .nav-item.active { color: var(--accent); }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .live-badge { margin-left: auto; font-family: var(--font); font-size: 9px; background: rgba(34,197,94,0.15); color: var(--success); padding: 2px 6px; border-radius: 4px; }
+
+  /* ── Stat cards ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .stat-label { font-size: 11px; font-family: var(--font); color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .stat-val { font-size: 28px; font-weight: 600; line-height: 1; }
+  .stat-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .stat-delta { font-size: 12px; margin-top: 6px; }
+  .delta-up { color: var(--success); }
+  .delta-down { color: var(--danger); }
+
+  /* ── Panels ── */
+  .panels { display: grid; grid-template-columns: 1fr 360px; gap: 20px; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .panel-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .panel-title { font-size: 13px; font-weight: 500; }
+  .panel-body { padding: 0; }
+
+  /* ── Recommendations table ── */
+  .rec-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .rec-table th { padding: 10px 16px; text-align: left; font-size: 11px; font-family: var(--font); color: var(--muted); border-bottom: 1px solid var(--border); font-weight: 400; text-transform: uppercase; letter-spacing: 0.5px; }
+  .rec-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .rec-table tr:last-child td { border-bottom: none; }
+  .rec-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* ── Badges ── */
+  .badge { display: inline-block; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-family: var(--font); font-weight: 500; }
+  .badge-persona-cold     { background: rgba(113,113,122,0.2); color: #a1a1aa; }
+  .badge-persona-warm     { background: rgba(245,158,11,0.15); color: #fbbf24; }
+  .badge-persona-intent   { background: rgba(99,102,241,0.15); color: #818cf8; }
+  .badge-persona-vip      { background: rgba(34,211,238,0.15); color: #22d3ee; }
+  .badge-persona-hesitant { background: rgba(168,85,247,0.15); color: #c084fc; }
+  .badge-sentiment-pos    { background: rgba(34,197,94,0.12); color: #4ade80; }
+  .badge-sentiment-neu    { background: rgba(113,113,122,0.15); color: #a1a1aa; }
+  .badge-sentiment-neg    { background: rgba(239,68,68,0.12); color: #f87171; }
+  .badge-urgency-low      { background: rgba(34,197,94,0.12); color: #4ade80; }
+  .badge-urgency-medium   { background: rgba(245,158,11,0.12); color: #fbbf24; }
+  .badge-urgency-high     { background: rgba(239,68,68,0.12); color: #f87171; }
+  .badge-urgency-critical { background: rgba(239,68,68,0.25); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); }
+  .badge-channel { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+  /* ── Action distribution ── */
+  .dist-list { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .dist-row { display: flex; flex-direction: column; gap: 5px; }
+  .dist-label { display: flex; justify-content: space-between; font-size: 12px; }
+  .dist-name { color: var(--text); }
+  .dist-count { color: var(--muted); font-family: var(--font); }
+  .dist-bar-bg { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+  .dist-bar { height: 100%; border-radius: 2px; transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+
+  /* ── Feedback modal ── */
+  .fb-btn { font-size: 11px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-family: var(--font); transition: all 0.15s; }
+  .fb-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .fb-btn.converted { background: rgba(34,197,94,0.1); border-color: var(--success); color: var(--success); }
+
+  /* ── Persona donut ── */
+  .donut-wrap { padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .donut-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── Header ── */
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .page-title { font-size: 20px; font-weight: 600; }
+  .page-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .header-actions { display: flex; gap: 10px; }
+  .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-family: var(--sans); font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--text); transition: all 0.15s; }
+  .btn:hover { border-color: rgba(255,255,255,0.2); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { opacity: 0.85; }
+
+  /* ── Config panel ── */
+  .config-form { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .form-row { display: flex; flex-direction: column; gap: 5px; }
+  .form-label { font-size: 11px; font-family: var(--font); color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .form-input { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: var(--text); font-size: 13px; font-family: var(--sans); outline: none; }
+  .form-input:focus { border-color: var(--accent); }
+  select.form-input option { background: var(--surface); }
+
+  /* ── Alert ── */
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; display: none; }
+  .alert.show { display: block; }
+  .alert-success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; }
+  .alert-error   { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 2px; background: var(--surface); border-radius: 8px; padding: 3px; }
+  .tab { padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; color: var(--muted); transition: all 0.15s; }
+  .tab.active { background: var(--card); color: var(--text); }
+
+  /* ── Pulse animation ── */
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .pulse { animation: pulse 2s infinite; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-tag">Agent 3</div>
+      <div class="logo-title">Recommendation<br>Intelligence</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="showTab('dashboard')">
+        <span class="nav-dot"></span> Dashboard
+        <span class="live-badge pulse">LIVE</span>
+      </div>
+      <div class="nav-item" onclick="showTab('feedback')">
+        <span class="nav-dot"></span> Feedback loop
+      </div>
+    </nav>
+    <div style="padding: 16px 20px; font-size: 11px; font-family: var(--font); color: var(--muted);">
+      <div id="api-status" style="display:flex;align-items:center;gap:6px;">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--muted);display:inline-block;" id="status-dot"></span>
+        <span id="status-text">Connecting…</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ── Dashboard tab ── -->
+    <div id="tab-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Recommendations</div>
+          <div class="page-sub" id="last-updated">Loading…</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn" onclick="loadData()">Refresh</button>
+        </div>
+      </div>
+
+      <div id="alert-dash" class="alert"></div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total recommendations</div>
+          <div class="stat-val" id="stat-total">—</div>
+          <div class="stat-sub">all time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Converted</div>
+          <div class="stat-val delta-up" id="stat-converted">—</div>
+          <div class="stat-sub" id="stat-conv-rate">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Critical urgency</div>
+          <div class="stat-val" id="stat-critical" style="color:var(--danger)">—</div>
+          <div class="stat-sub">need immediate action</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg confidence</div>
+          <div class="stat-val" id="stat-conf">—</div>
+          <div class="stat-sub">sentiment signal quality</div>
+        </div>
+      </div>
+
+      <div class="panels">
+        <!-- Recommendations list -->
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Recent recommendations</span>
+            <div class="tabs">
+              <div class="tab active" onclick="filterRecs('all', this)">All</div>
+              <div class="tab" onclick="filterRecs('critical', this)">Critical</div>
+              <div class="tab" onclick="filterRecs('converted', this)">Converted</div>
+            </div>
+          </div>
+          <div class="panel-body" style="overflow-x:auto;">
+            <table class="rec-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Persona</th>
+                  <th>Sentiment</th>
+                  <th>Action</th>
+                  <th>Channel</th>
+                  <th>Urgency</th>
+                  <th>Outcome</th>
+                </tr>
+              </thead>
+              <tbody id="rec-tbody">
+                <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
+          <!-- Action distribution -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Action distribution</span></div>
+            <div class="dist-list" id="action-dist">
+              <div style="color:var(--muted);font-size:13px;">Loading…</div>
+            </div>
+          </div>
+
+          <!-- Persona donut -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Persona breakdown</span></div>
+            <div class="donut-wrap">
+              <canvas id="donut-chart" width="160" height="160"></canvas>
+              <div class="donut-legend" id="donut-legend"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Feedback tab ── -->
+    <div id="tab-feedback" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Feedback loop</div>
+          <div class="page-sub">Mark recommendations as converted to improve the RAG knowledge base</div>
+        </div>
+      </div>
+
+      <div id="alert-fb" class="alert"></div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Pending outcome — recent recommendations</span>
+          <button class="btn" onclick="loadFeedbackList()">Refresh</button>
+        </div>
+        <div class="panel-body" style="overflow-x:auto;">
+          <table class="rec-table">
+            <thead>
+              <tr>
+                <th>Log ID</th><th>User</th><th>Persona</th><th>Action</th>
+                <th>Confidence</th><th>Time</th><th>Mark outcome</th>
+              </tr>
+            </thead>
+            <tbody id="fb-tbody">
+              <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+let BASE_URL = 'http://localhost:8000';
+let allRecs = [];
+let refreshTimer = null;
+const DIST_COLORS = ['#6366f1','#22d3ee','#22c55e','#f59e0b','#ef4444','#c084fc','#f87171'];
+const PERSONA_COLORS = {
+  'Cold':'#71717a', 'Warm':'#f59e0b', 'High Intent':'#6366f1',
+  'VIP':'#22d3ee', 'Hesitant':'#c084fc'
+};
+
+function showTab(name) {
+  ['dashboard','feedback'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach((el,i) => {
+    el.classList.toggle('active', ['dashboard','feedback'][i] === name);
+  });
+  if (name === 'feedback') loadFeedbackList();
+  if (name === 'dashboard') loadData();
+}
+
+async function checkHealth() {
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+  try {
+    const r = await fetch(BASE_URL + '/health', {signal: AbortSignal.timeout(3000)});
+    if (r.ok) {
+      dot.style.background = '#22c55e';
+      txt.textContent = 'Connected';
+    } else { throw new Error(); }
+  } catch {
+    dot.style.background = '#ef4444';
+    txt.textContent = 'Disconnected';
+  }
+}
+
+async function loadData() {
+  try {
+    const r = await fetch(BASE_URL + '/logs?limit=50');
+    if (!r.ok) throw new Error('API returned ' + r.status);
+    allRecs = await r.json();
+    renderDashboard(allRecs);
+    document.getElementById('last-updated').textContent =
+      'Last updated: ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    showAlert('alert-dash', 'error',
+      'Cannot load logs from ' + BASE_URL + '/logs — ' + e.message +
+      '<br><small>Make sure the API server is running and the /logs endpoint exists.</small>');
+  }
+}
+
+function renderDashboard(recs) {
+  const total     = recs.length;
+  const converted = recs.filter(r => r.converted === true).length;
+  const critical  = recs.filter(r => r.urgency === 'critical').length;
+  const avgConf   = total > 0 ? (recs.reduce((s,r)=>s+(r.confidence||0),0)/total) : 0;
+
+  document.getElementById('stat-total').textContent     = total;
+  document.getElementById('stat-converted').textContent = converted;
+  document.getElementById('stat-conv-rate').textContent = total > 0
+    ? Math.round(converted/total*100) + '% conversion rate' : '—';
+  document.getElementById('stat-critical').textContent  = critical;
+  document.getElementById('stat-conf').textContent      = avgConf.toFixed(2);
+
+  renderTable(recs, 'rec-tbody', true);
+  renderActionDist(recs);
+  renderDonut(recs);
+}
+
+function renderTable(recs, tbodyId, showOutcome) {
+  const tbody = document.getElementById(tbodyId);
+  if (!recs.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px;">No data</td></tr>';
+    return;
+  }
+  tbody.innerHTML = recs.slice(0,30).map(r => {
+    const persona = r.persona || '—';
+    const pClass = {
+      'Cold':'cold','Warm':'warm','High Intent':'intent',
+      'VIP':'vip','Hesitant':'hesitant'
+    }[persona] || 'cold';
+    const sent = (r.sentiment||'').toLowerCase();
+    const sClass = sent === 'positive' ? 'pos' : sent === 'negative' ? 'neg' : 'neu';
+    const urg = (r.urgency||'').toLowerCase();
+    const outcome = r.converted === true
+      ? '<span class="badge" style="background:rgba(34,197,94,0.12);color:#4ade80;">converted</span>'
+      : r.converted === false
+        ? '<span class="badge" style="background:rgba(239,68,68,0.08);color:#f87171;">no conv.</span>'
+        : '<span style="color:var(--muted);font-size:12px;">pending</span>';
+    return `<tr>
+      <td style="font-family:var(--font);font-size:12px;color:var(--muted);">${(r.user_id||'').slice(0,12)}…</td>
+      <td><span class="badge badge-persona-${pClass}">${persona}</span></td>
+      <td><span class="badge badge-sentiment-${sClass}">${r.sentiment||'—'}</span></td>
+      <td style="font-size:12px;">${r.action_type||'—'}</td>
+      <td><span class="badge badge-channel">${r.channel||'—'}</span></td>
+      <td><span class="badge badge-urgency-${urg}">${r.urgency||'—'}</span></td>
+      <td>${showOutcome ? outcome : ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterRecs(type, el) {
+  document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  let filtered = allRecs;
+  if (type === 'critical')  filtered = allRecs.filter(r => r.urgency === 'critical');
+  if (type === 'converted') filtered = allRecs.filter(r => r.converted === true);
+  renderTable(filtered, 'rec-tbody', true);
+}
+
+function renderActionDist(recs) {
+  const counts = {};
+  recs.forEach(r => { counts[r.action_type] = (counts[r.action_type]||0) + 1; });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const max = sorted[0]?.[1] || 1;
+  document.getElementById('action-dist').innerHTML = sorted.map(([name, count], i) => `
+    <div class="dist-row">
+      <div class="dist-label">
+        <span class="dist-name">${name}</span>
+        <span class="dist-count">${count}</span>
+      </div>
+      <div class="dist-bar-bg">
+        <div class="dist-bar" style="width:${Math.round(count/max*100)}%;background:${DIST_COLORS[i%DIST_COLORS.length]}"></div>
+      </div>
+    </div>
+  `).join('') || '<div style="color:var(--muted);font-size:13px;">No data</div>';
+}
+
+function renderDonut(recs) {
+  const counts = {};
+  recs.forEach(r => { counts[r.persona] = (counts[r.persona]||0) + 1; });
+  const entries = Object.entries(counts);
+  const total = entries.reduce((s,[,v])=>s+v, 0) || 1;
+  const canvas = document.getElementById('donut-chart');
+  const ctx = canvas.getContext('2d');
+  const cx = 80, cy = 80, r = 65, ri = 42;
+  ctx.clearRect(0,0,160,160);
+  let start = -Math.PI/2;
+  entries.forEach(([persona, count]) => {
+    const slice = count/total * Math.PI*2;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,start+slice);
+    ctx.closePath();
+    ctx.fillStyle = PERSONA_COLORS[persona] || '#888';
+    ctx.fill();
+    start += slice;
+  });
+  ctx.beginPath(); ctx.arc(cx,cy,ri,0,Math.PI*2); ctx.fillStyle='#1f1f23'; ctx.fill();
+  ctx.fillStyle='#f4f4f5'; ctx.font='500 14px DM Sans,sans-serif'; ctx.textAlign='center';
+  ctx.fillText(total, cx, cy+3); ctx.font='400 10px DM Sans,sans-serif';
+  ctx.fillStyle='#71717a'; ctx.fillText('users', cx, cy+17);
+
+  document.getElementById('donut-legend').innerHTML = entries.map(([p,c]) => `
+    <div class="legend-item">
+      <span class="legend-dot" style="background:${PERSONA_COLORS[p]||'#888'}"></span>
+      <span style="color:var(--muted)">${p}</span>
+      <span style="margin-left:auto;font-family:var(--font);font-size:11px;">${Math.round(c/total*100)}%</span>
+    </div>
+  `).join('');
+}
+
+async function loadFeedbackList() {
+  const tbody = document.getElementById('fb-tbody');
+  try {
+    const r = await fetch(BASE_URL + '/logs?limit=30&pending=true');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;">No pending items</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(row => `<tr>
+      <td style="font-family:var(--font);color:var(--muted);">#${row.id}</td>
+      <td style="font-family:var(--font);font-size:12px;">${(row.user_id||'').slice(0,14)}…</td>
+      <td><span class="badge badge-persona-${personaClass(row.persona)}">${row.persona||'—'}</span></td>
+      <td style="font-size:12px;">${row.action_type||'—'}</td>
+      <td style="font-family:var(--font);font-size:12px;">${(row.confidence||0).toFixed(2)}</td>
+      <td style="font-size:12px;color:var(--muted);">${row.created_at ? new Date(row.created_at).toLocaleString() : '—'}</td>
+      <td>
+        <button class="fb-btn converted" onclick="sendFeedback(${row.id},true,this)">Converted</button>
+        <button class="fb-btn" onclick="sendFeedback(${row.id},false,this)" style="margin-left:4px;">No conv.</button>
+      </td>
+    </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:20px;">${e.message}</td></tr>`;
+  }
+}
+
+function personaClass(p) {
+  return {'Cold':'cold','Warm':'warm','High Intent':'intent','VIP':'vip','Hesitant':'hesitant'}[p]||'cold';
+}
+
+async function sendFeedback(logId, converted, btn) {
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const r = await fetch(BASE_URL + '/feedback', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({log_id: logId, converted})
+    });
+    if (r.ok) {
+      btn.closest('tr').style.opacity = '0.4';
+      showAlert('alert-fb', 'success', `Log #${logId} marked as ${converted ? 'converted ✓' : 'not converted'}`);
+    } else { throw new Error(await r.text()); }
+  } catch(e) {
+    showAlert('alert-fb', 'error', 'Feedback error: ' + e.message);
+    btn.disabled = false; btn.textContent = converted ? 'Converted' : 'No conv.';
+  }
+}
+
+function showAlert(id, type, msg) {
+  const el = document.getElementById(id);
+  el.className = `alert alert-${type} show`;
+  el.innerHTML = msg;
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+// ── Init ──
+checkHealth();
+loadData();
+setInterval(checkHealth, 10000);
+refreshTimer = setInterval(loadData, 30000);
+</script>
+</body>
+</html>
