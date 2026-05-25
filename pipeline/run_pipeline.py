@@ -9,6 +9,30 @@ from pipeline.supabase_sync import sync_to_supabase
 
 load_dotenv()
 
+
+def run_full_pipeline(events_df: pd.DataFrame, sync_results: bool = True) -> pd.DataFrame:
+    os.makedirs("data",   exist_ok=True)
+    os.makedirs("models", exist_ok=True)
+
+    print("\n[1/4] Feature engineering...")
+    events_features = add_event_features(events_df)
+    events_features.to_parquet("data/events_features.parquet", index=False)
+
+    print("\n[2/4] Aggregating to user_features...")
+    user_features = aggregate_user_features(events_features)
+    user_features.to_parquet("data/user_features.parquet", index=False)
+
+    print("\n[3/4] Running agents in parallel...")
+    results = run_orchestrator(user_features)
+    results.to_parquet("data/user_scores_final.parquet", index=False)
+    results.to_csv("data/user_scores_final.csv", index=False)
+
+    if sync_results:
+        print("\n[4/4] Syncing to Supabase...")
+        sync_to_supabase(results, table="user_features")
+
+    return results
+
 def main():
     os.makedirs("data",   exist_ok=True)
     os.makedirs("models", exist_ok=True)
@@ -24,21 +48,7 @@ def main():
     df = pd.read_csv(csv_path, low_memory=False)
     print(f"  rows={len(df)}  cols={df.shape[1]}")
 
-    print("\n[2/5] Feature engineering...")
-    df = add_event_features(df)
-    df.to_parquet("data/events_features.parquet", index=False)
-
-    print("\n[3/5] Aggregating to user_features...")
-    user_features = aggregate_user_features(df)
-    user_features.to_parquet("data/user_features.parquet", index=False)
-
-    print("\n[4/5] Running agents in parallel...")
-    results = run_orchestrator(user_features)
-    results.to_parquet("data/user_scores_final.parquet", index=False)
-    results.to_csv("data/user_scores_final.csv", index=False)
-
-    print("\n[5/5] Syncing to Supabase...")
-    sync_to_supabase(results, table="user_features")
+    results = run_full_pipeline(df, sync_results=True)
 
     print("\n" + "="*50)
     print("Pipeline complete ✓")

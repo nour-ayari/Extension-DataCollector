@@ -1,0 +1,47 @@
+{
+  "example": {
+    "input": {
+      "client_id": 1000441.6293401995,
+      "recency_days": 4,
+      "frequency": 1,
+      "monetary": 0.0,
+      "total_events": 2,
+      "avg_session_duration": 0.0,
+      "avg_scroll_depth": 0.0,
+      "avg_clicks": 0.0,
+      "avg_page_views": 0.0,
+      "bounce_rate": 0.0,
+      "login_rate": 0.0,
+      "deep_scroll_rate": 0.0,
+      "high_engagement_rate": 0.0,
+      "max_funnel_depth": 1,
+      "avg_funnel_depth": 1.0,
+      "cart_abandonment_rate": 0.0,
+      "purchase_rate": 0.0,
+      "checkout_rate": 0.0,
+      "total_orders": 0.0,
+      "last_step": "user_engagement",
+      "device_mode": "mobile",
+      "preferred_source": "google",
+      "region": "Pichincha, Ecuador",
+      "nb_visits": 1,
+      "is_weekend_user": 0.0,
+      "preferred_hour": 9,
+      "age": 39.0,
+      "gender": "unknown"
+    },
+    "output": {
+      "rfm_score": 44.0,
+      "behaviour_score": 25.0,
+      "intent_score": 20.0,
+      "context_score": 100.0,
+      "persona": "VIP",
+      "cluster_id": 4,
+      "r_score": 5.0,
+      "f_score": 1.0,
+      "m_score": 1.0,
+      "final_score": 35.5,
+      "conversion_label": "Warm"
+    }
+  }
+}

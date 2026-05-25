@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from pipeline.agents import BaseAgent
+from . import BaseAgent
 
 class IntentAgent(BaseAgent):
     def __init__(self):

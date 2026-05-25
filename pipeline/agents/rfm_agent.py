@@ -1,5 +1,5 @@
 import pandas as pd
-from pipeline.agents import BaseAgent
+from . import BaseAgent
 
 class RFMAgent(BaseAgent):
     def __init__(self):
