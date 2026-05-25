@@ -157,7 +157,11 @@ function getProductInfoFromPage() {
 // -------------------------
 async function enrichEventProperties(props, identity = {}) {
   return new Promise((resolve) => {
-    chrome.storage.local.get(["nbVisits", "pagesPerSession", "addedToCart"], (data) => {
+    chrome.storage.local.get(["nbVisits", "pagesPerSession", "addedToCart", "sessionStart"], (data) => {
+      const sessionStart = typeof data.sessionStart === "number" ? data.sessionStart : null;
+      const sessionDurationSec = sessionStart ? Math.max(1, Math.round((Date.now() - sessionStart) / 1000)) : null;
+      const pageDurationSec = typeof props.time_on_page_sec === "number" ? props.time_on_page_sec : null;
+
       resolve({
         ...props,
         client_id: identity.clientId || null,
@@ -166,6 +170,9 @@ async function enrichEventProperties(props, identity = {}) {
         event_type: identity.eventName || null,
         nb_visits: data.nbVisits || 1,
         pages_per_session: data.pagesPerSession || 1,
+        duration: props.duration ?? pageDurationSec ?? sessionDurationSec,
+        page_duration_sec: pageDurationSec,
+        session_duration_sec: sessionDurationSec,
         cart_abandonned: !!data.addedToCart && !props.purchase_completed,
         is_bounce: props.is_bounce || false,
         age: null, // optional, to fill later
@@ -342,10 +349,12 @@ window.addEventListener("beforeunload", () => {
   const timeOnPageSec = Math.round((Date.now() - pageStart) / 1000);
   const pageType = detectPageType();
 
-  chrome.storage.local.get(["addedToCart", "checkoutStarted", "purchaseCompleted"], (data) => {
+  chrome.storage.local.get(["addedToCart", "checkoutStarted", "purchaseCompleted", "sessionStart"], (data) => {
     const addedToCart = !!data.addedToCart;
     const checkoutStarted = !!data.checkoutStarted;
     const purchaseCompleted = !!data.purchaseCompleted;
+    const sessionStart = typeof data.sessionStart === "number" ? data.sessionStart : pageStart;
+    const sessionDurationSec = Math.max(1, Math.round((Date.now() - sessionStart) / 1000));
 
     if (!purchaseCompleted && checkoutStarted && pageType === "checkout") {
       sendEvent("checkout_abandon", { abandon_reason: "exit_before_purchase" });
@@ -353,6 +362,13 @@ window.addEventListener("beforeunload", () => {
       sendEvent("cart_abandon", { abandon_reason: "exit_with_cart" });
     }
 
-    sendEvent("page_engagement", { duration: timeOnPageSec, max_scroll_pct: maxScroll, click_count: clickCount, is_bounce: clickCount === 0 && maxScroll < 25 && timeOnPageSec < 15 });
+    sendEvent("page_engagement", {
+      duration: timeOnPageSec,
+      time_on_page_sec: timeOnPageSec,
+      session_duration_sec: sessionDurationSec,
+      max_scroll_pct: maxScroll,
+      click_count: clickCount,
+      is_bounce: clickCount === 0 && maxScroll < 25 && timeOnPageSec < 15
+    });
   });
 });
