@@ -1,0 +1,16 @@
+                       precision    recall  f1-score   support
+
+       change_account     0.9639    0.2155    0.3522     17083
+         change_order     0.6490    0.3713    0.4723      9775
+check_payment_methods     0.7808    0.2961    0.4294      8949
+  contact_human_agent     0.6585    0.1304    0.2177     33467
+  product_information     0.7706    0.4693    0.5833     16151
+       shipping_costs     0.8457    0.8319    0.8387      5383
+       store_location     0.8027    0.2326    0.3607      5438
+      submit_feedback     0.9444    0.5270    0.6765      6120
+       track_delivery     0.3261    0.7701    0.4581      5816
+          track_order     0.8452    0.3060    0.4494     17266
+
+            micro avg     0.6824    0.3239    0.4393    125448
+            macro avg     0.7587    0.4150    0.4838    125448
+         weighted avg     0.7610    0.3239    0.4163    125448

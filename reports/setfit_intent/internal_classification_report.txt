@@ -1,0 +1,43 @@
+                                precision    recall  f1-score   support
+
+                   add_product     1.0000    1.0000    1.0000       143
+                  availability     0.9708    0.9727    0.9717       512
+                  cancel_order     0.9677    0.9333    0.9502       225
+                change_account     0.9410    0.9659    0.9533       264
+                  change_order     0.8782    0.9928    0.9320       276
+         check_payment_methods     0.9803    0.9933    0.9868       300
+           check_refund_policy     0.9856    0.8655    0.9217       476
+           contact_human_agent     0.9068    0.8117    0.8566       839
+                create_account     0.9758    0.9930    0.9843       284
+              damaged_delivery     0.5553    0.9017    0.6873       234
+                delete_account     1.0000    0.9268    0.9620       287
+                 delivery_time     0.8612    0.9857    0.9193       491
+              exchange_product     0.9965    0.9493    0.9723       296
+                  missing_item     0.9669    0.9070    0.9360       129
+                 order_history     0.9932    0.9732    0.9831       149
+                           pay     0.8778    0.9294    0.9029       170
+                 payment_issue     0.9901    0.9901    0.9901       302
+           product_information     0.9681    0.8998    0.9327      4083
+                 product_issue     0.8869    1.0000    0.9401       149
+              recover_password     0.9689    0.9720    0.9705       321
+                remove_product     0.9608    1.0000    0.9800       147
+               request_invoice     0.9901    0.9852    0.9876       405
+                request_refund     0.9213    0.9791    0.9493       287
+request_right_to_rectification     0.9545    0.9932    0.9735       148
+                return_product     0.7795    0.9345    0.8500       473
+                  sales_period     0.9669    0.9932    0.9799       147
+                shipping_costs     0.6912    0.9724    0.8080       145
+                store_location     0.9645    0.9784    0.9714       139
+           store_opening_hours     0.9800    0.9932    0.9866       148
+               submit_feedback     0.9735    0.9833    0.9784       299
+           submit_product_idea     0.9125    0.9799    0.9450       149
+               technical_issue     0.9803    1.0000    0.9900       149
+                track_delivery     0.8739    0.8447    0.8591       599
+                   track_order     0.8908    0.9288    0.9094       281
+                  track_refund     0.9959    0.9449    0.9697       254
+                       use_app     0.9859    0.9722    0.9790       144
+                    wrong_item     0.9419    0.9733    0.9574       150
+
+                      accuracy                         0.9302     13994
+                     macro avg     0.9307    0.9573    0.9413     13994
+                  weighted avg     0.9377    0.9302    0.9317     13994

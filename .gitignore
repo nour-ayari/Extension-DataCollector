@@ -1,3 +1,34 @@
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual env
+venv/
+.env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+data/
+outputs/
+results/
+
+# Models (TRÈS IMPORTANT)
+models/
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.pkl
+
+# HuggingFace / SetFit artifacts
+*.json
+!config*.json   # garder configs utiles si léger
+!tokenizer*.json
+
 node_modules/
 **/node_modules/
 
@@ -17,9 +48,19 @@ chrome-profile/
 # Logs
 *.log
 
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
 # OS files
 .DS_Store
 Thumbs.db
 data/
 data/events_cleaned.csv 
 **/**.csv
+

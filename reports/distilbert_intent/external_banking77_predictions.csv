@@ -1,0 +1,123 @@
+text,label,intent_name,mapped_intent,y_true,y_pred
+How do I locate my card?,11,card_arrival,track_order,track_order,check_payment_methods
+"I still have not received my new card, I ordered over a week ago.",11,card_arrival,track_order,track_order,pay
+I ordered a card but it has not arrived. Help please!,11,card_arrival,track_order,track_order,contact_human_agent
+Is there a way to know when my card will arrive?,11,card_arrival,track_order,track_order,delivery_time
+My card has not arrived yet.,11,card_arrival,track_order,track_order,track_delivery
+When will I get my card?,11,card_arrival,track_order,track_order,check_payment_methods
+Do you know if there is a tracking number for the new card you sent me?,11,card_arrival,track_order,track_order,pay
+i have not received my card,11,card_arrival,track_order,track_order,payment_issue
+still waiting on that card,11,card_arrival,track_order,track_order,check_payment_methods
+Is it normal to have to wait over a week for my new card?,11,card_arrival,track_order,track_order,pay
+How do I track my card?,11,card_arrival,track_order,track_order,track_order
+How long does a card delivery take?,11,card_arrival,track_order,track_order,track_delivery
+I still don't have my card after 2 weeks.  What should I do?,11,card_arrival,track_order,track_order,pay
+still waiting on my new card,11,card_arrival,track_order,track_order,check_payment_methods
+I am still waiting for my card after 1 week.  Is this ok?,11,card_arrival,track_order,track_order,check_refund_policy
+"I have been waiting longer than expected for my bank card, could you provide information on when it will arrive?",11,card_arrival,track_order,track_order,delivery_time
+I've been waiting longer than expected for my card.,11,card_arrival,track_order,track_order,check_payment_methods
+Why hasn't my card been delivered?,11,card_arrival,track_order,track_order,track_delivery
+Where is my new card? I have been waiting a week!,11,card_arrival,track_order,track_order,track_delivery
+My card still hasn't arrived after 2 weeks. Is it lost?,11,card_arrival,track_order,track_order,track_delivery
+"I did not get my card yet, is it lost?",11,card_arrival,track_order,track_order,payment_issue
+Status of the card I ordered.,11,card_arrival,track_order,track_order,track_order
+How long should my new card take to arrive?,11,card_arrival,track_order,track_order,delivery_time
+I ordered my card 2 weeks ago and it still isn't here? What do I do?,11,card_arrival,track_order,track_order,cancel_order
+"My card has not arrived yet, where is it?",11,card_arrival,track_order,track_order,track_delivery
+What is the tracking number for my card that was mailed?,11,card_arrival,track_order,track_order,track_delivery
+I think something went wrong with my card delivery as I haven't received it yet.,11,card_arrival,track_order,track_order,track_delivery
+"I'm still waiting for delivery of my new card, why is it taking so long?",11,card_arrival,track_order,track_order,track_delivery
+"I ordered a card a week ago, and it's still not here. What do I do?",11,card_arrival,track_order,track_order,cancel_order
+i want to track the card you sent,11,card_arrival,track_order,track_order,check_payment_methods
+My card hasn't arrived yet.,11,card_arrival,track_order,track_order,track_delivery
+I was expecting my new card and am wondering why I haven't received it yet?,11,card_arrival,track_order,track_order,check_payment_methods
+How do I know when my card will arrive?,11,card_arrival,track_order,track_order,delivery_time
+I'm still waiting on my card to be delivered.,11,card_arrival,track_order,track_order,track_delivery
+Does the card you sent have a way to track to it?,11,card_arrival,track_order,track_order,pay
+I ordered a card and I still haven't received it. It's been two weeks. What can I do?,11,card_arrival,track_order,track_order,cancel_order
+"I'm starting to think my card is lost because it still hasn't arrived, can you help?",11,card_arrival,track_order,track_order,track_delivery
+Is there tracking info available?,11,card_arrival,track_order,track_order,availability
+What is the tracking number for the card you sent?,11,card_arrival,track_order,track_order,pay
+Where is the tracking number for the card you sent me?,11,card_arrival,track_order,track_order,pay
+I payed with a card and was charged an extra fee,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+I was charged a fee after using my card and I shouldn't have been.,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+Is there a reason I was charged a fee for using my card as payment? I've never had an extra fee before.,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+"I show another charge on my card from when I used it, why?",15,card_payment_fee_charged,payment_issue,payment_issue,payment_issue
+"Why do I get charged additional fees on some payments, but not others?",15,card_payment_fee_charged,payment_issue,payment_issue,payment_issue
+I used my card for a purchase and was charged a fee,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+Why was I charged for card payment?,15,card_payment_fee_charged,payment_issue,payment_issue,payment_issue
+There is an unauthorized fee.,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+I would appreciate that someone let me know when there is an extra charge for payments. I was checking the app earlier and saying a charge on one of my payments that was additional that no one made me aware of before.,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+Why was I charged an extra fee when paying with my card?,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+Why did I have to pay extra because I paid with card?,15,card_payment_fee_charged,payment_issue,payment_issue,check_payment_methods
+Why are there fees for card usage?,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+im not sure what this charge is for,15,card_payment_fee_charged,payment_issue,payment_issue,track_delivery
+What is the fee charged with this card payment?,15,card_payment_fee_charged,payment_issue,payment_issue,payment_issue
+When would my card be charged an extra fee for a transaction?,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+Why did I have to pay more when I do it with my card?,15,card_payment_fee_charged,payment_issue,payment_issue,check_payment_methods
+I made a card payment and a fee is showing up?,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+I have been charged a fee for paying with card,15,card_payment_fee_charged,payment_issue,payment_issue,check_payment_methods
+What is the fee on my card payment?,15,card_payment_fee_charged,payment_issue,payment_issue,check_payment_methods
+Why would I be charged a fee for card payment?,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+Will I always be charged a fee for using my card?,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+"Can I check somewhere if there will be a fee on my payment or not? Seems you are charging in some cases, what's the pattern there?",15,card_payment_fee_charged,payment_issue,payment_issue,pay
+Paying in card resulted in a fee,15,card_payment_fee_charged,payment_issue,payment_issue,payment_issue
+I paid with card and I think there was a fee applied.,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+So what items  actually come  with  extra  fees,15,card_payment_fee_charged,payment_issue,payment_issue,product_information
+How do I avoid getting charged a fee on my card?,15,card_payment_fee_charged,payment_issue,payment_issue,payment_issue
+Is there a fee when you pay with your card?,15,card_payment_fee_charged,payment_issue,payment_issue,check_payment_methods
+I have been charged with a fee for paying with my card.,15,card_payment_fee_charged,payment_issue,payment_issue,payment_issue
+For the first time I got a fee on my account. How do I know when you charge these fees?,15,card_payment_fee_charged,payment_issue,payment_issue,change_account
+Someone needs to make me aware when there are extra charges for payments. I happened to be looking at the app earlier and noticed a charge associated to a payment that was extra that no one made me aware of before at all.,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+Is using my card free?,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+Why was I charged an extra fee when using a card?,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+What fees apply when using a card?,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+Why do you charge for payments? Why aren't your charges clearly laid out in the agreement?,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+Why was I charged a fee when I paid with card?,15,card_payment_fee_charged,payment_issue,payment_issue,check_payment_methods
+There is a fee on my account. Why?,15,card_payment_fee_charged,payment_issue,payment_issue,change_account
+Why do you charge fees on card payments?,15,card_payment_fee_charged,payment_issue,payment_issue,payment_issue
+I was charged a fee for a card payment. Why?,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+Why was a charged a fee for using the card?,15,card_payment_fee_charged,payment_issue,payment_issue,pay
+They charged me for paying with my card.,15,card_payment_fee_charged,payment_issue,payment_issue,check_payment_methods
+Will my card be accepted all over the world?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Who accepts this card?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Can I use my card for payment all over the world?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+It will be fine to use at any establishment that accepts Mastercard.,10,card_acceptance,payment_issue,payment_issue,pay
+Where can the card be used?,10,card_acceptance,payment_issue,payment_issue,pay
+Can my card be used everywhere?,10,card_acceptance,payment_issue,payment_issue,contact_human_agent
+Are there any limits on where I can use my card?,10,card_acceptance,payment_issue,payment_issue,pay
+What stores can I sue my card?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Can I use my card anywhere I want?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Is there anywhere my card will not be accepted?,10,card_acceptance,payment_issue,payment_issue,pay
+What are the rules to where I can use my card?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Do you know where my card will be accepted?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+What places can I use my card?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Is my card accepted everywhere?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+What places will accept my card for payment?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Does this card work everywhere?,10,card_acceptance,payment_issue,payment_issue,product_information
+"
+
+What businesses accept this card?",10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Where can I use my card?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Which outlets accept my card?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+"I am traveling to Germany, Will I be able to use my card there?",10,card_acceptance,payment_issue,payment_issue,pay
+What stores will take my credit card as payment?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Is there any place I cannot use my card?,10,card_acceptance,payment_issue,payment_issue,pay
+Will I be able to use my card anywhere?,10,card_acceptance,payment_issue,payment_issue,pay
+Is my card usable anywhere?,10,card_acceptance,payment_issue,payment_issue,availability
+Is it acceptable to use my card anywhere?,10,card_acceptance,payment_issue,payment_issue,pay
+Can I use my card everywhere?,10,card_acceptance,payment_issue,payment_issue,pay
+Where is my card accepted?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Where can I pay with my debit or credit card?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Where should my card work?,10,card_acceptance,payment_issue,payment_issue,damaged_delivery
+areas card is accpeted,10,card_acceptance,payment_issue,payment_issue,create_account
+places i can use the card,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Can I make online purchases with my card?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Does every place of business accept this card?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+What places will accept my card?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Can I use my card anywere?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Will any business take this card?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Will filling stations accept my card?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+Where am I able to use the card?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods
+What can I use my card to pay for?,10,card_acceptance,payment_issue,payment_issue,pay
+Who accepts my card?,10,card_acceptance,payment_issue,payment_issue,check_payment_methods

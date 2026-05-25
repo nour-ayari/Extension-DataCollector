@@ -1,0 +1,8 @@
+               precision    recall  f1-score   support
+
+payment_issue     0.8000    0.1000    0.1778        80
+  track_order     1.0000    0.0500    0.0952        40
+
+    micro avg     0.8333    0.0833    0.1515       120
+    macro avg     0.9000    0.0750    0.1365       120
+ weighted avg     0.8667    0.0833    0.1503       120
