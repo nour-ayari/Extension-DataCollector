@@ -1,4 +1,5 @@
 import os
+import importlib
 import sys
 import json
 from pathlib import Path
@@ -20,10 +21,13 @@ for extra_path in [ASSEMBLY_DIR, AGENT3_DIR]:
     if extra_path.exists() and str(extra_path) not in sys.path:
         sys.path.insert(0, str(extra_path))
 
-try:
-    from orchestrator_integration import get_recommendations_for_users
-except Exception:
-    get_recommendations_for_users = None
+
+def _load_get_recommendations_for_users():
+    try:
+        module = importlib.import_module("orchestrator_integration")
+        return getattr(module, "get_recommendations_for_users", None)
+    except Exception:
+        return None
 
 
 REQUIRED_EVENT_COLUMNS = {
@@ -126,35 +130,48 @@ def _load_events_input(csv_path: str) -> pd.DataFrame:
     print(f"  source=supabase rows={len(df)} cols={df.shape[1]} (saved snapshot to {csv_path})")
     return df
 
-def main():
-    os.makedirs("data",   exist_ok=True)
+
+def _run_pipeline_steps(events_df: pd.DataFrame, sync_results: bool) -> pd.DataFrame:
+    os.makedirs("data", exist_ok=True)
     os.makedirs("models", exist_ok=True)
 
-    csv_path = "data/events_cleaned.csv"
-    df = _load_events_input(csv_path)
+    print("\n[1/4] Feature engineering...")
+    events_features = add_event_features(events_df)
+    events_features.to_parquet("data/events_features.parquet", index=False)
 
-    print("\n[2/6] Feature engineering...")
-    df = add_event_features(df)
-    df.to_parquet("data/events_features.parquet", index=False)
-
-    print("\n[3/6] Aggregating to user_features...")
-    user_features = aggregate_user_features(df)
+    print("\n[2/4] Aggregating to user_features...")
+    user_features = aggregate_user_features(events_features)
     user_features.to_parquet("data/user_features.parquet", index=False)
 
-    print("\n[4/6] Running agents in parallel...")
+    print("\n[3/4] Running agents in parallel...")
     results = run_orchestrator(user_features)
     results.to_parquet("data/user_scores_final.parquet", index=False)
     results.to_csv("data/user_scores_final.csv", index=False)
 
-    print("\n[5/6] Syncing to Supabase...")
-    sync_to_supabase(results, table="user_features")
+    if sync_results:
+        print("\n[4/4] Syncing to Supabase...")
+        sync_to_supabase(results, table="user_features")
+
+    return results
+
+
+def run_full_pipeline(events_df: pd.DataFrame, sync_results: bool = True) -> pd.DataFrame:
+    return _run_pipeline_steps(events_df, sync_results=sync_results)
+
+def main():
+    csv_path = "data/events_cleaned.csv"
+    df = _load_events_input(csv_path)
+
+    results = _run_pipeline_steps(df, sync_results=True)
+
+    get_recommendations_for_users = _load_get_recommendations_for_users()
 
     if get_recommendations_for_users is not None:
         agent3_mode = os.getenv("AGENT3_MODE", "direct")
-        max_users = os.getenv("AGENT3_MAX_USERS")
-        max_users = int(max_users) if max_users else None
+        max_users_raw = os.getenv("AGENT3_MAX_USERS")
+        max_users = int(max_users_raw) if max_users_raw else None
 
-        print("\n[6/6] Generating Agent 3 recommendations from user_features...")
+        print("\n[5/5] Generating Agent 3 recommendations from user_features...")
         rec_df = get_recommendations_for_users(results, mode=agent3_mode, max_users=max_users)
         if not rec_df.empty:
             rec_df.to_parquet("data/recommendations_final.parquet", index=False)
@@ -163,7 +180,7 @@ def main():
         else:
             print("  no recommendations generated")
     else:
-        print("\n[6/6] Agent 3 integration not available; skipping recommendation generation.")
+        print("\n[5/5] Agent 3 integration not available; skipping recommendation generation.")
 
     print("\n" + "="*50)
     print("Pipeline complete ✓")

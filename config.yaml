@@ -1,0 +1,24 @@
+# config.yaml — hyperparamètres centralisés
+ 
+data:
+  raw_path: "data/raw/bitext_retail.csv"
+  processed_path: "data/processed/"
+  splits_path: "data/splits/"
+  test_size: 0.15
+  val_size: 0.15
+  random_seed: 42
+ 
+model:
+  base_model: "distilbert-base-uncased"
+  max_length: 128
+  num_intent_classes: 27
+training:
+  batch_size: 32
+  learning_rate: 2.0e-5
+  num_epochs: 3
+  warmup_steps: 100
+  weight_decay: 0.01
+ 
+mlflow:
+  experiment_name: "conv_nlp_pipeline"
+  tracking_uri: "mlruns/"

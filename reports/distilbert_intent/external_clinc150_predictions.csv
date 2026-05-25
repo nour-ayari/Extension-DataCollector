@@ -1,0 +1,211 @@
+text,intent,intent_name,mapped_intent,y_true,y_pred
+tell me how to go about reporting a damaged card,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+my card is damaged,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+i want to report a damaged card,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+where should i report a damaged card,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+can you find out how to report a damaged card,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+my card has become too frayed and torn to use,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+what do i do about a card that's too messed up to be properly scanned,87,damaged_card,payment_issue,payment_issue,payment_issue
+my card became damaged when i dropped it in the parking lot and it got ran over,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+i have a damaged card that needs replaced because my son dropped it in a blender,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+i sat on my credit card and broke it in half and need it replaced,87,damaged_card,payment_issue,payment_issue,pay
+my credit card got torn and i need a new one,87,damaged_card,payment_issue,payment_issue,pay
+what do i do with a damaged credit card,87,damaged_card,payment_issue,payment_issue,check_payment_methods
+how do i replace a damaged card,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+i have a card that needs replaced because my wine dumped wine on it,87,damaged_card,payment_issue,payment_issue,return_product
+i spilled wine on my credit card and now its all mushy and needs to be replaced,87,damaged_card,payment_issue,payment_issue,pay
+my dog swallowed my credit card and i need a new one,87,damaged_card,payment_issue,payment_issue,check_payment_methods
+i want to report a damaged card that my cat shredded with its claws,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+i need to replace a card that my daughter spilled juice on,87,damaged_card,payment_issue,payment_issue,return_product
+i'm unable to use my card because it's been ruined,87,damaged_card,payment_issue,payment_issue,recover_password
+i can't use my card because it’s damaged badly,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+i cannot use my card cuz it's damaged,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+i can't use my card because it’s messed up,87,damaged_card,payment_issue,payment_issue,delete_account
+i can't use my card because it’s broken,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+i can't use my card because i damaged it,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+who should i talk to about the fact that i inadvertently split my card almost in half,87,damaged_card,payment_issue,payment_issue,payment_issue
+i accidentally deactivated the magnetic stripe on my visa debit card and i need to report it,87,damaged_card,payment_issue,payment_issue,recover_password
+can i talk to someone to let them know my card was damaged from being melted on a radiator,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+i would like to report a damaged card that was burnt,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+i would like to report my card damaged since i accidentally spilled gorilla glue all over it and the numbers are now obscured,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+my visa has been damaged,87,damaged_card,payment_issue,payment_issue,damaged_delivery
+i need my routing number for my checking account at bb&t bank,45,routing,check_payment_methods,check_payment_methods,delete_account
+what is my routing number to my checking account at bb&t bankj,45,routing,check_payment_methods,check_payment_methods,recover_password
+"tell me my routing number at my bank, community trust",45,routing,check_payment_methods,check_payment_methods,recover_password
+what is the routing number of my checking account at first national bankj,45,routing,check_payment_methods,check_payment_methods,delete_account
+"give me the routing number of my checking account at my main bank, first commerce",45,routing,check_payment_methods,check_payment_methods,delete_account
+what is my bank routing number,45,routing,check_payment_methods,check_payment_methods,recover_password
+what's my routing number,45,routing,check_payment_methods,check_payment_methods,recover_password
+what's wells fargo's routing number,45,routing,check_payment_methods,check_payment_methods,product_information
+tell me my routing number,45,routing,check_payment_methods,check_payment_methods,recover_password
+where can i find my routing number,45,routing,check_payment_methods,check_payment_methods,recover_password
+where's the routing number for wells fargo,45,routing,check_payment_methods,check_payment_methods,track_order
+where can i find wells fargo's routing number,45,routing,check_payment_methods,check_payment_methods,recover_password
+where is wells fargo's routing number listed,45,routing,check_payment_methods,check_payment_methods,track_order
+where should i go to find the routing number for well's fargo,45,routing,check_payment_methods,check_payment_methods,recover_password
+is my routing number on my account page,45,routing,check_payment_methods,check_payment_methods,recover_password
+what is the bank's routing number,45,routing,check_payment_methods,check_payment_methods,recover_password
+i want to know what my routing number is,45,routing,check_payment_methods,check_payment_methods,recover_password
+i need a routing number,45,routing,check_payment_methods,check_payment_methods,recover_password
+does pnc have a routing number,45,routing,check_payment_methods,check_payment_methods,contact_human_agent
+can you tell me the routing number to pnc,45,routing,check_payment_methods,check_payment_methods,recover_password
+can you please read me the routing number to pnc,45,routing,check_payment_methods,check_payment_methods,recover_password
+where can i find routing number for pnc,45,routing,check_payment_methods,check_payment_methods,recover_password
+what is the routing number for pnc,45,routing,check_payment_methods,check_payment_methods,recover_password
+i need x's routing number,45,routing,check_payment_methods,check_payment_methods,recover_password
+where would century bank have their routing number listed,45,routing,check_payment_methods,check_payment_methods,track_order
+where do i go if i am seeking the routing number of dallas capital,45,routing,check_payment_methods,check_payment_methods,track_order
+what is the location that td bank has their routing number listed,45,routing,check_payment_methods,check_payment_methods,track_order
+where would the routing number for first utah be located,45,routing,check_payment_methods,check_payment_methods,track_order
+tell me what my savings account routing number is,45,routing,check_payment_methods,check_payment_methods,recover_password
+what is chase bank's routing number,45,routing,check_payment_methods,check_payment_methods,recover_password
+where is my order now,84,order_status,track_order,track_order,track_order
+tell me all updates about my order's status,84,order_status,track_order,track_order,track_order
+is my order on its way or what's going on,84,order_status,track_order,track_order,track_order
+how is my order doing right now,84,order_status,track_order,track_order,track_order
+locate my package,84,order_status,track_order,track_order,track_delivery
+can you monitor my package's progress,84,order_status,track_order,track_order,delivery_time
+track my order,84,order_status,track_order,track_order,track_order
+tell me where my package is currently,84,order_status,track_order,track_order,track_delivery
+where is my package en route,84,order_status,track_order,track_order,track_delivery
+give me the status of my order,84,order_status,track_order,track_order,track_order
+when will i get my order,84,order_status,track_order,track_order,track_order
+tell me where my order is,84,order_status,track_order,track_order,track_order
+what is the status of the order i placed with you yesterday,84,order_status,track_order,track_order,track_order
+what's the updated status of my order,84,order_status,track_order,track_order,track_order
+can you help with delivery tracking,84,order_status,track_order,track_order,track_delivery
+i need a delivery tracked,84,order_status,track_order,track_order,track_delivery
+i need to track my order,84,order_status,track_order,track_order,track_order
+i placed an order and i need it tracked,84,order_status,track_order,track_order,track_order
+could you track an order for me,84,order_status,track_order,track_order,track_order
+has my package been sent,84,order_status,track_order,track_order,track_delivery
+what time is my package getting here,84,order_status,track_order,track_order,track_delivery
+how's my amazon order doing,84,order_status,track_order,track_order,track_order
+i need to track a package,84,order_status,track_order,track_order,track_delivery
+i want to track a package i should be getting,84,order_status,track_order,track_order,track_delivery
+please track my order,84,order_status,track_order,track_order,track_order
+can you tell me when my item will get here,84,order_status,track_order,track_order,delivery_time
+can you tell me where my item is,84,order_status,track_order,track_order,track_order
+what's up with my order,84,order_status,track_order,track_order,track_order
+are they any updates on my order,84,order_status,track_order,track_order,track_order
+i need to track the status of my order,84,order_status,track_order,track_order,track_order
+i'm struggling to remind myself the pin number to my card,89,pin_change,change_account,change_account,recover_password
+i'm having trouble remembering the pin number to my card,89,pin_change,change_account,change_account,recover_password
+the pin number to my card has been forgotten,89,pin_change,change_account,change_account,recover_password
+i don't remember the pin number to my card,89,pin_change,change_account,change_account,recover_password
+i do not recall the pin number to my card,89,pin_change,change_account,change_account,recover_password
+i would like to change the name on my checking account,89,pin_change,change_account,change_account,change_account
+i would like to change the name on my credit card account,89,pin_change,change_account,change_account,check_payment_methods
+i would like to change the name on my first hawaiian bank account,89,pin_change,change_account,change_account,change_account
+i would like to change the name on my first bankcard account,89,pin_change,change_account,change_account,change_account
+i would like to change the name on my capital one account,89,pin_change,change_account,change_account,change_account
+change the pin on my savings account to 1234,89,pin_change,change_account,change_account,change_account
+i want to change my savings account pin to 1234,89,pin_change,change_account,change_account,change_account
+make 1234 a new pin for my savings account,89,pin_change,change_account,change_account,recover_password
+make 1234 the pin on my savings account,89,pin_change,change_account,change_account,recover_password
+can you make 1234 the pin for my savings account,89,pin_change,change_account,change_account,recover_password
+make my pin 1234 for my checking account,89,pin_change,change_account,change_account,recover_password
+go my to checking account and switch my pin to 1234,89,pin_change,change_account,change_account,recover_password
+access my checking account and update my pin to 1234,89,pin_change,change_account,change_account,recover_password
+correct my account pin to 1234 on my checking account,89,pin_change,change_account,change_account,recover_password
+modify my account pin to 1234 on my checking account,89,pin_change,change_account,change_account,change_account
+tell me the pin number for my checking account,89,pin_change,change_account,change_account,recover_password
+please give me the pin number for my checking account,89,pin_change,change_account,change_account,recover_password
+i need the pin number for my checking account,89,pin_change,change_account,change_account,recover_password
+does my checking account have a pin number,89,pin_change,change_account,change_account,recover_password
+what's the pin number for my checking account,89,pin_change,change_account,change_account,recover_password
+change the code of my savings account to be 1234,89,pin_change,change_account,change_account,change_account
+alter the pin on my savings account to be 1234,89,pin_change,change_account,change_account,change_account
+what exactly is my pin,89,pin_change,change_account,change_account,recover_password
+how do i change the account pin number for me,89,pin_change,change_account,change_account,change_account
+please tell me how do i change the account pin number,89,pin_change,change_account,change_account,change_account
+why is my bank account locked,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+how do i unlock my bank account,2,account_blocked,contact_human_agent,contact_human_agent,recover_password
+can you unlock my bank account,2,account_blocked,contact_human_agent,contact_human_agent,recover_password
+how did my bank account get frozen,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+can you help me unlock my bank account,2,account_blocked,contact_human_agent,contact_human_agent,recover_password
+call my bank and ask them why my account is frozen,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+check with my bank to see why my account is frozen,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+do you know why my bank account is frozen,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+why did my bank place a hold on my bank account,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+are there any problems with my bank account,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+did someone who is unauthorized try to get into my bank account,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+how can i unfreeze my bank account,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+why is there a stop on my deposit account,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+why can't i use my money market account,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+why is there a delay on my checking account,2,account_blocked,contact_human_agent,contact_human_agent,change_account
+why is my checking account not working,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+what could cause a hold on my savings account,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+what caused a hold on my us bank account,2,account_blocked,contact_human_agent,contact_human_agent,change_account
+can you check and see why us bank put a hold on my account,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+why does us bank have a hold on my account,2,account_blocked,contact_human_agent,contact_human_agent,change_account
+reasons that us bank would place a hold on my account,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+check to see why us bank placed a hold on my account,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+"is there a problem with my account, it appears to be blocked",2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+"what is up with my account, why is it blocked",2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+there seems to be an issue with my account,2,account_blocked,contact_human_agent,contact_human_agent,change_account
+can you help me unblock my account,2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+"can you check what the problem with my account is, it seems to b e blocked",2,account_blocked,contact_human_agent,contact_human_agent,delete_account
+is there a reason you put a hold on my chase account,2,account_blocked,contact_human_agent,contact_human_agent,change_account
+why can't i access my chase account,2,account_blocked,contact_human_agent,contact_human_agent,change_account
+how come my chase account has a hold on it,2,account_blocked,contact_human_agent,contact_human_agent,delivery_time
+i want to report fraudulent activity on my navy federal card,70,report_fraud,payment_issue,payment_issue,payment_issue
+i would like to report fraudulent activity on my chase card,70,report_fraud,payment_issue,payment_issue,payment_issue
+i need to report fraudulent activity on my usaa card,70,report_fraud,payment_issue,payment_issue,payment_issue
+i have to report fraudulent activity on my bank of the west card,70,report_fraud,payment_issue,payment_issue,payment_issue
+i have to report fraudulent activity the bank of america card,70,report_fraud,payment_issue,payment_issue,payment_issue
+i seem to have a purchase that i didn't make from olive garden on my account,70,report_fraud,payment_issue,payment_issue,change_account
+my online bill has some items that i didn't purchase from penneys,70,report_fraud,payment_issue,payment_issue,request_invoice
+my account shows a transaction that i didn't make from foot locker,70,report_fraud,payment_issue,payment_issue,delete_account
+my bill shows a purchase from payless shoes but i didn't buy anything,70,report_fraud,payment_issue,payment_issue,request_invoice
+i have some charges on my account from old navy that aren't mine,70,report_fraud,payment_issue,payment_issue,change_account
+this charge is bs,70,report_fraud,payment_issue,payment_issue,product_information
+i have a bogus transaction from amazon on my account,70,report_fraud,payment_issue,payment_issue,change_account
+i have a fraudulent buy from dave's video on my account,70,report_fraud,payment_issue,payment_issue,change_account
+i have a crap transaction from guitar center on my account,70,report_fraud,payment_issue,payment_issue,change_account
+i think this transaction is bogus,70,report_fraud,payment_issue,payment_issue,payment_issue
+i don't remember buying this,70,report_fraud,payment_issue,payment_issue,return_product
+i have a bs transaction from ebay on my account,70,report_fraud,payment_issue,payment_issue,exchange_product
+i've got a fraudulent purchase from kayak on my account,70,report_fraud,payment_issue,payment_issue,change_account
+do i have a fraudulent transaction on my account,70,report_fraud,payment_issue,payment_issue,change_account
+i'm pretty sure i have a fraudulent transaction on my account,70,report_fraud,payment_issue,payment_issue,change_account
+there's a false charge on my account from mcdonald's,70,report_fraud,payment_issue,payment_issue,change_account
+i think there's a fraudulent charge from mcdonald's on my account,70,report_fraud,payment_issue,payment_issue,change_account
+i think someone jacked my bank account,70,report_fraud,payment_issue,payment_issue,delete_account
+i saw suspicious activity on my bank account,70,report_fraud,payment_issue,payment_issue,change_account
+someone else used my account to buy stuff from mcdonald's,70,report_fraud,payment_issue,payment_issue,delete_account
+there's a messed up transaction on my account from mcdonald's,70,report_fraud,payment_issue,payment_issue,change_account
+i saw a fraudulent transaction,70,report_fraud,payment_issue,payment_issue,payment_issue
+i have a false charge on my account from mcdonald's,70,report_fraud,payment_issue,payment_issue,change_account
+who do i contact to report fraud on my visa,70,report_fraud,payment_issue,payment_issue,payment_issue
+there has been unauthorized use of my visa,70,report_fraud,payment_issue,payment_issue,recover_password
+i must pay verizon what minimum amount on my bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the lowest amount i must pay on my verizon bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+"at a minimum, what must i pay on my verizon bill",143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is my minimum verizon bill payment,143,min_payment,check_payment_methods,check_payment_methods,check_payment_methods
+"what must i pay, at a minimum, on my verizon bill",143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what's the least i can pay this month,143,min_payment,check_payment_methods,check_payment_methods,pay
+what is my amex minimum payment,143,min_payment,check_payment_methods,check_payment_methods,check_payment_methods
+what's the minimum payment,143,min_payment,check_payment_methods,check_payment_methods,check_payment_methods
+what is my minimum payment and when is it due,143,min_payment,check_payment_methods,check_payment_methods,pay
+is there a minimum payment i can make,143,min_payment,check_payment_methods,check_payment_methods,pay
+what is the lowest amount i can pay for my cellphone bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the lowest amount i can pay for my insurance bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the minimum i can pay on my credit card bill,143,min_payment,check_payment_methods,check_payment_methods,check_payment_methods
+what is the lowest amount i can pay for my medical bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the minimum i can pay on my phone bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the minimum i can pay on my insurance bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the minimum i can pay on my electric bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the minimum i can pay on my gas bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the lowest amount i can pay for my hospital bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the lowest amount i can pay for my car bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the minimum i can pay on my cell phone bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the minimum i can pay on my water bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the minimum i can pay on my heating bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+tell me the minimum i can pay on my utilities bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the minimum amount i can pay on my gas bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+do you know the smallest amount i can pay on my water bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+look up the lowest amount i can pay on my electricity bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the minimum payable amount for my rent bill this month,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+what is the minimum payment on my water bill,143,min_payment,check_payment_methods,check_payment_methods,request_invoice
+"if i wanted to spend the lowest for my electric bill, then how much would it be",143,min_payment,check_payment_methods,check_payment_methods,request_invoice

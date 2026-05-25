@@ -3,7 +3,7 @@ import pandas as pd
 import joblib
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler
-from pipeline.agents import BaseAgent
+from . import BaseAgent
 
 PERSONA_SCORE = {
     "VIP": 100, "High Intent": 80,
@@ -27,9 +27,13 @@ class ContextAgent(BaseAgent):
 
     def fit_predict(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
+        if df.empty:
+            raise ValueError("ContextAgent requires at least one row")
+
+        n_clusters = min(self.n_clusters, len(df))
         X  = self.scaler.fit_transform(df[self.feature_cols].fillna(0))
 
-        self.km      = KMeans(n_clusters=self.n_clusters, random_state=42, n_init=10)
+        self.km      = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
         df["cluster_id"] = self.km.fit_predict(X)
 
         centers = pd.DataFrame(

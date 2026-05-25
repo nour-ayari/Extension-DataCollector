@@ -1,0 +1,10 @@
+                     precision    recall  f1-score   support
+
+       cancel_order     1.0000    0.6333    0.7755        30
+     change_account     0.8333    0.1667    0.2778        30
+product_information     1.0000    0.1000    0.1818        30
+        track_order     0.6667    0.6000    0.6316        30
+
+          micro avg     0.8182    0.3750    0.5143       120
+          macro avg     0.8750    0.3750    0.4667       120
+       weighted avg     0.8750    0.3750    0.4667       120

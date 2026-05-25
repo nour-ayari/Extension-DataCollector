@@ -1,9 +1,9 @@
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
-from pipeline.agents.rfm_agent       import RFMAgent
-from pipeline.agents.behaviour_agent import BehaviourAgent
-from pipeline.agents.intent_agent    import IntentAgent
-from pipeline.agents.context_agent   import ContextAgent
+from .agents.rfm_agent       import RFMAgent
+from .agents.behaviour_agent import BehaviourAgent
+from .agents.intent_agent    import IntentAgent
+from .agents.context_agent   import ContextAgent
 
 WEIGHTS = {
     "rfm_score":       0.25,

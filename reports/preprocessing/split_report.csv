@@ -1,0 +1,4 @@
+split,n_samples,n_intents,min_per_intent,max_per_intent,sources
+train,94418,37,828,31317,18
+val,13993,37,128,4082,6
+test,13994,37,129,4083,6
