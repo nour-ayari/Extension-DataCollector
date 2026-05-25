@@ -153,6 +153,26 @@ def run(inp: AgentInput) -> AgentOutput:
         behavioral_context = user_context,
         converted          = False,
     )
+    # Mark generated recommendations as synthetic_generated and attach source_session_id for traceability
+    try:
+        avg_rank = 0.0
+        if retrieved_cases:
+            avg_rank = float(sum((c.get("rerank_score") or 0.0) for c in retrieved_cases) / max(len(retrieved_cases), 1))
+    except Exception:
+        avg_rank = 0.0
+    upsert_case(
+        persona=inp.persona,
+        sentiment=inp.sentiment,
+        confidence=inp.confidence,
+        action_type=raw.get("action_type", action_template.action_type),
+        action_detail=raw.get("subject_line", ""),
+        behavioral_context=user_context,
+        converted=False,
+        source_type="synthetic_generated",
+        parent_session_id=None,
+        source_session_id=inp.user_id,
+        retrieval_rank_score=avg_rank,
+    )
 
     return AgentOutput(
         user_id         = inp.user_id,

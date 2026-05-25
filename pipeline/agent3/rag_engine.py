@@ -31,6 +31,7 @@ def generate_llm_response(prompt: str) -> Optional[str]:
 
     ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434").rstrip("/")
     model = os.getenv("OLLAMA_MODEL", "llama3")
+    timeout_seconds = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120"))
 
     try:
         response = requests.post(
@@ -41,7 +42,7 @@ def generate_llm_response(prompt: str) -> Optional[str]:
                 "stream": False,
                 "format": "json",
             },
-            timeout=30,
+            timeout=timeout_seconds,
         )
         response.raise_for_status()
         payload = response.json()

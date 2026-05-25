@@ -24,7 +24,10 @@ from supabase import create_client
 
 from pipeline.agent3.decision_matrix import lookup
 from pipeline.agent3.rag_context import from_user_meta
-from pipeline.agent3.vector_store import search_similar_cases, upsert_case
+from pipeline.agent3.vector_store import search_similar_cases, upsert_case, embed, build_case_text
+import random
+import math
+import numpy as np
 
 load_dotenv()
 
@@ -273,11 +276,35 @@ def _build_user_meta(row: pd.Series) -> dict:
     }
 
 
+def _mutate_text(text: str, variant: int = 0) -> str:
+    """Make small, deterministic variations to increase semantic diversity."""
+    if not isinstance(text, str):
+        return text
+    variants = [
+        ("reached checkout", ["stalled near payment stage", "abandoned during checkout", "exited at payment step"]),
+        ("abandoned", ["left before purchase", "chose not to finish", "dropped off before completing"]),
+        ("Nearly", ["Almost", "Close to", "Nearly there"]),
+        ("VIP", ["valued customer", "repeat buyer", "top customer"]),
+    ]
+    s = text
+    for i, (pattern, subs) in enumerate(variants):
+        if pattern.lower() in s.lower():
+            choice = subs[(variant + i) % len(subs)]
+            s = s.replace(pattern, choice)
+    # small stylistic mutations
+    if variant % 2 == 0:
+        s = s.replace(" - ", ". ")
+    if len(s) > 200:
+        s = s[:200] + "..."
+    return s
+
+
 def seed_coveo(
     limit: int | None = None,
     dry_run: bool = False,
     clear_existing: bool = False,
     max_per_bucket: int = 8,
+    augment: bool = False,
 ) -> None:
     if clear_existing:
         print("clear_existing requested, but no source column exists in intervention_cases. Skipping deletion.")
@@ -299,6 +326,7 @@ def seed_coveo(
     kept = 0
     skipped = 0
     errors = 0
+    synthetic_added = 0
 
     for _, row in sessions.iterrows():
         processed += 1
@@ -360,6 +388,9 @@ def seed_coveo(
             "behavioral_context": behavioral_context,
             "converted": converted,
             "bucket": bucket,
+            "source_type": "real",
+            "parent_session_id": row["session_id"],
+            "source_session_id": row["session_id"],
         }
 
         if dry_run:
@@ -378,12 +409,52 @@ def seed_coveo(
                 action_detail=action_detail,
                 behavioral_context=behavioral_context,
                 converted=converted,
+                source_type="real",
+                parent_session_id=row["session_id"],
+                source_session_id=row["session_id"],
             )
             bucket_counts[bucket] += 1
             bucket_converted_counts[bucket] += int(converted)
             kept += 1
             seeded_cases.append(case)
             print(f"[{kept:04d}] {persona:12s} x {sentiment:8s} -> {template.action_type:14s} converted={converted}")
+            # Optionally generate synthetic clones to fill buckets (controlled, lineage-tracked)
+            if augment:
+                # produce up to (max_per_bucket - current_count) clones, limit 2 per session
+                clones_target = min(max_per_bucket - bucket_counts[bucket], 2)
+                for clone_i in range(clones_target):
+                    clone_detail = _mutate_text(action_detail, variant=clone_i)
+                    clone_context = _mutate_text(behavioral_context, variant=clone_i)
+                    clone_case = dict(case)
+                    clone_case.update({
+                        "action_detail": clone_detail,
+                        "behavioral_context": clone_context,
+                        "source_type": "synthetic_clone",
+                        "parent_session_id": row["session_id"],
+                        "source_session_id": f"{row['session_id']}:clone:{clone_i+1}",
+                    })
+                    try:
+                        upsert_case(
+                            persona=clone_case["persona"],
+                            sentiment=clone_case["sentiment"],
+                            confidence=clone_case["confidence"],
+                            action_type=clone_case["action_type"],
+                            action_detail=clone_case["action_detail"],
+                            behavioral_context=clone_case["behavioral_context"],
+                            converted=clone_case["converted"],
+                            source_type="synthetic_clone",
+                            parent_session_id=row["session_id"],
+                            source_session_id=clone_case["source_session_id"],
+                        )
+                        synthetic_added += 1
+                        bucket_counts[bucket] += 1
+                        seeded_cases.append(clone_case)
+                        kept += 1
+                        print(f"  cloned -> {clone_case['action_type']} (clone {clone_i+1})")
+                    except Exception as exc:
+                        errors += 1
+                        print(f"ERROR adding clone for session {row['session_id']}: {exc}")
+            # avoid duplicate print; already logged above
         except Exception as exc:
             errors += 1
             print(f"ERROR on session {row['session_id']}: {exc}")
@@ -397,6 +468,8 @@ def seed_coveo(
     print(f"Skipped: {skipped}")
     print(f"Converted=True: {converted_kept} ({converted_pct:.1f}%)")
     print(f"Errors: {errors}")
+    print(f"Synthetic augmentations added: {synthetic_added}")
+    print(f"Final intervention cases: {len(seeded_cases)}")
     print("\nBucket summary")
     for persona in ["Cold", "Hesitant", "Warm", "High Intent", "VIP"]:
         for sentiment in ["Positive", "Neutral", "Negative"]:
@@ -406,6 +479,59 @@ def seed_coveo(
             ]
             for action_type, count, converted_count in entries:
                 print(f"  {persona:12s} x {sentiment:8s} -> {action_type:14s}: {count} cases ({converted_count} converted)")
+
+    # --- Diagnostics report ---
+    try:
+        from collections import Counter
+
+        total_cases = len(seeded_cases)
+        persona_counts = Counter(c.get("persona") for c in seeded_cases)
+        sentiment_counts = Counter(c.get("sentiment") for c in seeded_cases)
+        source_counts = Counter(c.get("source_type", "real") for c in seeded_cases)
+        action_counts = Counter(c.get("action_type") for c in seeded_cases)
+        converted_counts = sum(1 for c in seeded_cases if c.get("converted"))
+
+        print("\nDiagnostics summary")
+        print(f"  Total cases (this run): {total_cases}")
+        print(f"  Persona distribution: {dict(persona_counts)}")
+        print(f"  Sentiment distribution: {dict(sentiment_counts)}")
+        print(f"  Source type distribution: {dict(source_counts)}")
+        print(f"  Conversion rate: {converted_counts}/{total_cases} = {converted_counts/max(total_cases,1):.2f}")
+
+        # action entropy
+        probs = [v / total_cases for v in action_counts.values()] if total_cases > 0 else [1.0]
+        action_entropy = -sum(p * math.log2(p) for p in probs if p > 0)
+        print(f"  Action entropy: {action_entropy:.3f} (unique actions: {len(action_counts)})")
+
+        # average embedding similarity (sample up to 300 cases)
+        sample_n = min(300, total_cases)
+        if sample_n >= 2:
+            sample = seeded_cases[:sample_n]
+            texts = [build_case_text(c['persona'], c['sentiment'], c.get('action_type',''), c.get('behavioral_context',''), converted=c.get('converted')) for c in sample]
+            embs = np.array([embed(t) for t in texts])
+            # ensure normalized; sentence-transformers uses normalized embeddings when requested
+            sims = embs @ embs.T
+            # ignore diagonal
+            iu = np.triu_indices(sample_n, k=1)
+            avg_sim = float(sims[iu].mean())
+        else:
+            avg_sim = 0.0
+        print(f"  Average embedding similarity (sample {sample_n}): {avg_sim:.4f}")
+
+        synthetic_ratio = (total_cases - (source_counts.get('real', 0))) / max(total_cases, 1)
+        print(f"  Synthetic ratio: {synthetic_ratio:.3f}")
+
+        # warnings
+        if any(v / max(total_cases,1) > 0.40 for _, v in action_counts.items()):
+            print("WARNING: One action dominates >40% of cases")
+        if any(v / max(total_cases,1) > 0.40 for _, v in persona_counts.items()):
+            print("WARNING: One persona dominates >40% of cases")
+        if synthetic_ratio > 0.80:
+            print("WARNING: Synthetic ratio >80% — review seeding strategy")
+        if avg_sim > 0.95:
+            print("WARNING: Average embedding similarity >0.95 — semantic variance may be low")
+    except Exception as exc:
+        print(f"Diagnostics generation failed: {exc}")
 
     validation_case = next(
         (case for case in seeded_cases if case["persona"] == "High Intent" and case["sentiment"] == "Negative"),
@@ -441,6 +567,7 @@ if __name__ == "__main__":
     parser.add_argument("--dry-run", action="store_true", help="Print cases, do not upsert")
     parser.add_argument("--clear", action="store_true", help="Warn and skip deletion unless a source column exists")
     parser.add_argument("--max-per-bucket", type=int, default=8, help="Maximum cases per persona/sentiment/action bucket")
+    parser.add_argument("--augment", action="store_true", help="Generate lineage-tracked synthetic clones to fill underpopulated buckets")
     args = parser.parse_args()
 
     seed_coveo(
@@ -448,4 +575,5 @@ if __name__ == "__main__":
         dry_run=args.dry_run,
         clear_existing=args.clear,
         max_per_bucket=args.max_per_bucket,
+        augment=args.augment,
     )
