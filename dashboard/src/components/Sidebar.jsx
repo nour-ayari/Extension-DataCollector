@@ -1,10 +1,11 @@
-import { LayoutDashboard, MessageSquareMore, Settings2, Sparkles, X } from 'lucide-react'
+import { BarChart3, LayoutDashboard, MessageSquareMore, Settings2, Sparkles, X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { Badge } from './Badge.jsx'
 import { cn } from '../utils/cn.js'
 
 const navigation = [
-  { label: 'Overview', to: '/', icon: LayoutDashboard, end: true },
+  { label: 'Dashboard', to: '/', icon: LayoutDashboard, end: true },
+  { label: 'Overview', to: '/overview', icon: BarChart3 },
   { label: 'Feedback', to: '/feedback', icon: MessageSquareMore },
   { label: 'Settings', to: '/settings', icon: Settings2 },
 ]
@@ -77,17 +78,14 @@ export function Sidebar({ open, onClose, apiHealth }) {
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
               Connection status
             </p>
-            <Badge
-              tone={apiHealth.status === 'connected' ? 'success' : apiHealth.status === 'offline' ? 'danger' : 'info'}
-              className="w-fit"
-            >
+            <Badge tone={apiHealth.status === 'connected' ? 'success' : apiHealth.status === 'offline' ? 'danger' : apiHealth.status === 'checking' ? 'info' : 'muted'} className="w-fit">
               {apiHealth.status === 'connected'
                 ? 'Connected'
                 : apiHealth.status === 'offline'
                   ? 'Offline'
                   : apiHealth.status === 'checking'
                     ? 'Checking'
-                    : 'Mock mode'}
+                      : 'Not configured'}
             </Badge>
           </div>
 

@@ -2,7 +2,7 @@ import { Menu, Search } from 'lucide-react'
 import { Badge } from './Badge.jsx'
 import { ThemeToggle } from './ThemeToggle.jsx'
 
-export function Topbar({ title, subtitle, onMenuClick, apiHealth }) {
+export function Topbar({ title, subtitle, onMenuClick, apiHealth, rightActions }) {
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/75 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/75">
       <div className="flex items-center gap-4 px-4 py-4 sm:px-6 xl:px-10">
@@ -25,7 +25,7 @@ export function Topbar({ title, subtitle, onMenuClick, apiHealth }) {
             </h2>
             {apiHealth.status ? (
               <Badge
-                tone={apiHealth.status === 'connected' ? 'success' : apiHealth.status === 'offline' ? 'danger' : 'info'}
+                tone={apiHealth.status === 'connected' ? 'success' : apiHealth.status === 'offline' ? 'danger' : apiHealth.status === 'checking' ? 'info' : 'muted'}
                 className="hidden sm:inline-flex"
               >
                 {apiHealth.status === 'connected'
@@ -34,7 +34,7 @@ export function Topbar({ title, subtitle, onMenuClick, apiHealth }) {
                     ? 'API offline'
                     : apiHealth.status === 'checking'
                       ? 'Checking API'
-                      : 'Mock API'}
+                      : 'API not configured'}
               </Badge>
             ) : null}
           </div>
@@ -43,6 +43,10 @@ export function Topbar({ title, subtitle, onMenuClick, apiHealth }) {
         <div className="hidden min-w-[260px] items-center rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm text-slate-400 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 xl:flex">
           <Search className="mr-2 h-4 w-4" />
           Search users, actions, or segments
+        </div>
+
+        <div className="flex items-center gap-3">
+          {rightActions}
         </div>
 
         <ThemeToggle />

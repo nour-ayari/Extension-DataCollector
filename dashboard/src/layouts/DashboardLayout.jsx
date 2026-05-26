@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from '../components/Sidebar.jsx'
 import { Topbar } from '../components/Topbar.jsx'
-import { routeMeta } from '../data/dashboardData.js'
+import { NotificationCenter } from '../components/notifications'
+import { routeMeta } from '../data/routeMeta.js'
 import { useApiHealth } from '../hooks/useApiHealth.js'
 
 export default function DashboardLayout() {
@@ -22,6 +23,7 @@ export default function DashboardLayout() {
           subtitle={currentMeta.subtitle}
           onMenuClick={() => setSidebarOpen(true)}
           apiHealth={apiHealth}
+          rightActions={<NotificationCenter />}
         />
 
         <main className="px-4 py-8 sm:px-6 lg:py-10 xl:px-10">
