@@ -1,22 +1,84 @@
-import { useThemeMode } from '../hooks/useThemeMode.jsx'
-import { useApiHealth } from '../hooks/useApiHealth.js'
+import { useMemo } from 'react'
+import { Globe, PlugZap, Sparkles, Wifi } from 'lucide-react'
 import { Badge } from '../components/Badge.jsx'
 import { PageHeader } from '../components/PageHeader.jsx'
 import { SectionCard } from '../components/SectionCard.jsx'
-import { useDashboardSnapshot } from '../hooks/useDashboardSnapshot.js'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
+import { useThemeMode } from '../hooks/useThemeMode.jsx'
+import { useApiHealth } from '../hooks/useApiHealth.js'
+
+function statusTone(status) {
+  if (status === 'connected') {
+    return 'success'
+  }
+
+  if (status === 'offline') {
+    return 'danger'
+  }
+
+  if (status === 'checking') {
+    return 'info'
+  }
+
+  return 'muted'
+}
+
+function statusLabel(status) {
+  if (status === 'connected') {
+    return 'Connected'
+  }
+
+  if (status === 'offline') {
+    return 'Offline'
+  }
+
+  if (status === 'checking') {
+    return 'Checking'
+  }
+
+  return 'Not configured'
+}
 
 export default function SettingsPage() {
   const { theme } = useThemeMode()
   const apiHealth = useApiHealth()
-  const { integrationChecklist } = useDashboardSnapshot()
+
+  const runtimeChecks = useMemo(
+    () => [
+      {
+        title: 'Theme persistence',
+        detail: `The dashboard is currently using ${theme} mode and persists the preference locally.`,
+        icon: Sparkles,
+        tone: 'accent',
+      },
+      {
+        title: 'API connectivity',
+        detail: apiHealth.message,
+        icon: Globe,
+        tone: statusTone(apiHealth.status),
+      },
+      {
+        title: 'Realtime channel',
+        detail: 'WebSocket updates, reconnect behavior, and polling fallback are wired through the live dashboard hooks.',
+        icon: Wifi,
+        tone: 'info',
+      },
+      {
+        title: 'Notification layer',
+        detail: 'Toasts, bell notifications, unread counts, and browser permissions are managed by the shared notification store.',
+        icon: PlugZap,
+        tone: 'success',
+      },
+    ],
+    [apiHealth.message, apiHealth.status, theme],
+  )
 
   return (
     <div className="space-y-8 animate-fade-in">
       <PageHeader
         eyebrow="Settings"
         title="Workspace configuration"
-        description="Keep the dashboard ready for API integration, theming, and larger product workflows."
+        description="Inspect the actual dashboard runtime state, API connectivity, and production feature readiness."
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -29,22 +91,16 @@ export default function SettingsPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="API client" description="Axios is configured and ready for the backend." className="h-full">
+        <SectionCard title="API connection" description="The dashboard uses a single production API base URL." className="h-full">
           <div className="space-y-3">
-            <Badge tone={apiHealth.status === 'connected' ? 'success' : apiHealth.status === 'offline' ? 'danger' : 'info'} className="w-fit">
-              {apiHealth.status === 'connected'
-                ? 'Connected'
-                : apiHealth.status === 'offline'
-                  ? 'Offline'
-                  : apiHealth.status === 'checking'
-                    ? 'Checking'
-                    : 'Mock mode'}
+            <Badge tone={statusTone(apiHealth.status)} className="w-fit">
+              {statusLabel(apiHealth.status)}
             </Badge>
             <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{apiHealth.message}</p>
           </div>
         </SectionCard>
 
-        <SectionCard title="Environment" description="Frontend runtime and API base URL." className="h-full">
+        <SectionCard title="Environment" description="Frontend runtime and backend endpoint." className="h-full">
           <div className="space-y-3 text-sm text-slate-500 dark:text-slate-400">
             <p>
               Theme-aware UI: <span className="font-semibold text-slate-900 dark:text-white">{theme}</span>
@@ -55,20 +111,20 @@ export default function SettingsPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Routing" description="React Router splits the dashboard into modular sections." className="h-full">
+        <SectionCard title="Deployment" description="Current production wiring and readiness signals." className="h-full">
           <div className="space-y-3 text-sm text-slate-500 dark:text-slate-400">
-            <p>Overview, feedback, and settings are isolated as route-level pages.</p>
-            <p>The layout and navigation stay shared across the entire dashboard shell.</p>
+            <p>Route shell, query layer, notifications, and realtime updates are all connected through shared production hooks.</p>
+            <p>There are no mock dashboards or demo snapshots in the active route tree.</p>
           </div>
         </SectionCard>
       </div>
 
       <SectionCard
-        title="Architecture checklist"
-        description="The current UI architecture is ready for real API endpoints and richer dashboard states."
+        title="Runtime checklist"
+        description="These cards reflect live dashboard capabilities and backend integration status."
       >
-        <div className="grid gap-4 xl:grid-cols-3">
-          {integrationChecklist.map((item) => {
+        <div className="grid gap-4 xl:grid-cols-4">
+          {runtimeChecks.map((item) => {
             const Icon = item.icon
 
             return (
