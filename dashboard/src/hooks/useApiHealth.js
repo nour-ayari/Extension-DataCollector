@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { apiBaseUrl, apiClient } from '../utils/apiClient.js'
+import { apiBaseUrl } from '../services/api.ts'
 
 function createInitialState() {
   if (!apiBaseUrl) {
     return {
-      status: 'mock',
-      message: 'Mock mode enabled',
+      status: 'unconfigured',
+      message: 'API base URL is not configured',
       loading: false,
       baseUrl: 'Not configured',
     }
@@ -27,33 +27,36 @@ export function useApiHealth() {
       return undefined
     }
 
-    let active = true
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), 2500)
 
-    apiClient
-      .get('/health', { timeout: 2500 })
+    fetch(`${apiBaseUrl}/health`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+      signal: controller.signal,
+    })
       .then(() => {
-        if (active) {
-          setState({
-            status: 'connected',
-            message: 'API reachable',
-            loading: false,
-            baseUrl: apiBaseUrl,
-          })
-        }
+        setState({
+          status: 'connected',
+          message: 'API reachable',
+          loading: false,
+          baseUrl: apiBaseUrl,
+        })
       })
       .catch(() => {
-        if (active) {
-          setState({
-            status: 'offline',
-            message: 'API unreachable',
-            loading: false,
-            baseUrl: apiBaseUrl,
-          })
-        }
+        setState({
+          status: 'offline',
+          message: 'API unreachable',
+          loading: false,
+          baseUrl: apiBaseUrl,
+        })
       })
 
     return () => {
-      active = false
+      controller.abort()
+      window.clearTimeout(timeoutId)
     }
   }, [])
 
