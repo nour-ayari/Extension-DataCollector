@@ -7,11 +7,22 @@ and a light diversity pass to avoid action-type collapse in prompts.
 from __future__ import annotations
 
 import os
+from collections import Counter
 from datetime import datetime, timezone
 from typing import Optional
 
 
 MIN_SIMILARITY = float(os.getenv("RAG_MIN_SIMILARITY", 0.65))
+SOURCE_WEIGHTS = {
+    "real": float(os.getenv("RAG_SOURCE_WEIGHT_REAL", 1.0)),
+    "synthetic_clone": float(os.getenv("RAG_SOURCE_WEIGHT_SYNTHETIC_CLONE", 0.92)),
+    "synthetic_generated": float(os.getenv("RAG_SOURCE_WEIGHT_SYNTHETIC_GENERATED", 0.85)),
+}
+MAX_SAME_ACTION = int(os.getenv("RAG_MAX_SAME_ACTION", 2))
+MAX_SAME_PERSONA = int(os.getenv("RAG_MAX_SAME_PERSONA", 2))
+MAX_SAME_SENTIMENT = int(os.getenv("RAG_MAX_SAME_SENTIMENT", 2))
+SYNTHETIC_DOMINANCE_THRESHOLD = float(os.getenv("RAG_SYNTHETIC_DOMINANCE_THRESHOLD", 0.8))
+SYNTHETIC_DOMINANCE_PENALTY = float(os.getenv("RAG_SYNTHETIC_DOMINANCE_PENALTY", 0.95))
 
 
 def _parse_created_at(value) -> Optional[datetime]:
@@ -47,6 +58,47 @@ def _outcome_weight(converted, churn_risk: Optional[str] = None) -> float:
     return 1.0
 
 
+def _source_weight(source_type: Optional[str]) -> float:
+    return SOURCE_WEIGHTS.get((source_type or "real").strip().lower(), SOURCE_WEIGHTS["real"])
+
+
+def _select_diverse_candidates(scored: list[dict], top_k: int) -> list[dict]:
+    selected: list[dict] = []
+    skipped: list[dict] = []
+    action_counts: Counter[str] = Counter()
+    persona_counts: Counter[str] = Counter()
+    sentiment_counts: Counter[str] = Counter()
+
+    def _can_add(case: dict) -> bool:
+        action = case.get("action_type") or ""
+        persona = case.get("persona") or ""
+        sentiment = case.get("sentiment") or ""
+        return (
+            action_counts[action] < MAX_SAME_ACTION
+            and persona_counts[persona] < MAX_SAME_PERSONA
+            and sentiment_counts[sentiment] < MAX_SAME_SENTIMENT
+        )
+
+    for case in scored:
+        if len(selected) >= top_k:
+            break
+        if _can_add(case):
+            selected.append(case)
+            action_counts[case.get("action_type") or ""] += 1
+            persona_counts[case.get("persona") or ""] += 1
+            sentiment_counts[case.get("sentiment") or ""] += 1
+        else:
+            skipped.append(case)
+
+    if len(selected) < top_k:
+        for case in skipped:
+            if len(selected) >= top_k:
+                break
+            selected.append(case)
+
+    return selected
+
+
 def rerank(
     cases: list[dict],
     top_k: int,
@@ -61,26 +113,31 @@ def rerank(
         similarity = float(case.get("similarity", 0.0) or 0.0)
         outcome_weight = _outcome_weight(case.get("converted"), churn_risk=churn_risk)
         recency_weight = _recency_weight(case.get("created_at"))
+        source_type = (case.get("source_type") or "real").strip().lower()
+        source_weight = _source_weight(source_type)
         item = dict(case)
+        item.setdefault("source_type", source_type)
+        item.setdefault("parent_session_id", case.get("parent_session_id"))
+        item.setdefault("source_session_id", case.get("source_session_id"))
         item["outcome_weight"] = outcome_weight
         item["recency_weight"] = recency_weight
-        item["rerank_score"] = similarity * outcome_weight * recency_weight
+        item["source_weight"] = source_weight
+        item["rerank_score"] = similarity * outcome_weight * recency_weight * source_weight
         scored.append(item)
 
     scored.sort(key=lambda row: row.get("rerank_score", 0.0), reverse=True)
-    top = scored[: max(top_k, 0)]
+    selected = _select_diverse_candidates(scored, max(top_k, 0))
 
-    if len(top) > 1:
-        action_types = {row.get("action_type") for row in top}
-        if len(action_types) == 1:
-            replacement_pool = [row for row in scored[top_k:] if row.get("action_type") not in action_types]
-            if replacement_pool:
-                replacement = replacement_pool[0]
-                replacement["diversity_injected"] = True
-                top[-1] = replacement
-                top.sort(key=lambda row: row.get("rerank_score", 0.0), reverse=True)
+    if selected:
+        synthetic_selected = sum(1 for row in selected if (row.get("source_type") or "real") != "real")
+        selected_ratio = synthetic_selected / max(len(selected), 1)
+        if selected_ratio > SYNTHETIC_DOMINANCE_THRESHOLD:
+            for row in selected:
+                if (row.get("source_type") or "real") != "real":
+                    row["rerank_score"] *= SYNTHETIC_DOMINANCE_PENALTY
+            selected.sort(key=lambda row: row.get("rerank_score", 0.0), reverse=True)
 
-    return top
+    return selected
 
 
 def format_for_prompt(cases: list[dict]) -> str:
@@ -93,7 +150,7 @@ def format_for_prompt(cases: list[dict]) -> str:
         diversity = " | diversity_injected" if case.get("diversity_injected") else ""
         blocks.append(
             f"Case {idx} (score={case.get('rerank_score', 0.0):.2f}, sim={case.get('similarity', 0.0):.2f}, {outcome}{diversity}): "
-            f"persona={case.get('persona')}, sentiment={case.get('sentiment')}, "
+            f"persona={case.get('persona')}, sentiment={case.get('sentiment')}, source={case.get('source_type', 'real')}, "
             f"action={case.get('action_type')} - \"{case.get('action_detail', '')}\" | ctx: {case.get('context', '')}"
         )
     return "\n".join(blocks)

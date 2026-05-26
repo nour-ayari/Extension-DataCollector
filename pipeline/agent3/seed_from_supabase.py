@@ -27,6 +27,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -194,6 +195,36 @@ def build_seed_case(row: dict) -> dict | None:
     }
 
 
+def _upsert_case_with_retry(case: dict, retries: int = 3, base_delay_seconds: float = 1.0) -> None:
+    """Retry transient Supabase/network failures before giving up on a row."""
+    last_exc: Exception | None = None
+    for attempt in range(1, retries + 1):
+        try:
+            upsert_case(
+                persona            = case["persona"],
+                sentiment          = case["sentiment"],
+                confidence         = case["confidence"],
+                action_type        = case["action_type"],
+                action_detail      = case["action_detail"],
+                behavioral_context = case["behavioral_context"],
+                converted          = case["converted"],
+                source_type        = "real",
+                parent_session_id  = case.get("session_id"),
+                source_session_id  = case.get("session_id"),
+            )
+            return
+        except Exception as exc:
+            last_exc = exc
+            if attempt >= retries:
+                break
+            delay = base_delay_seconds * attempt
+            print(f"    retry {attempt}/{retries} after transient error: {exc}")
+            time.sleep(delay)
+
+    if last_exc is not None:
+        raise last_exc
+
+
 def _build_action_detail(template, ctx: UserContext, converted: bool) -> str:
     """
     Produce a realistic action_detail string matching what the LLM generates.
@@ -252,15 +283,7 @@ def seed(limit: int | None = None, dry_run: bool = False, clear: bool = False):
             continue
 
         try:
-            upsert_case(
-                persona            = case["persona"],
-                sentiment          = case["sentiment"],
-                confidence         = case["confidence"],
-                action_type        = case["action_type"],
-                action_detail      = case["action_detail"],
-                behavioral_context = case["behavioral_context"],
-                converted          = case["converted"],
-            )
+            _upsert_case_with_retry(case)
             print(f"  [{i:03d}/{len(rows)}] {status} {case['persona']:15s} × {case['sentiment']:10s}"
                   f" → {case['action_type']:20s}")
             ok += 1
