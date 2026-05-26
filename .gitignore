@@ -44,7 +44,8 @@ chrome-profile/
 # Environment variables
 .env
 .env.*
-
+venv/
+.venv/
 # Logs
 *.log
 

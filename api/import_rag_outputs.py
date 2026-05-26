@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from supabase_client import supabase
 
-RAG_PATH = Path("D:/conv_nlp_pipeline/reports/rag_export/rag_output.json")
+RAG_PATH = Path("D:/conv_nlp_pipeline/reports/rag_export/mapped_rag_output.json")
 
 def flatten_output(item: dict) -> dict:
     intent = item.get("intent", {})
@@ -13,8 +13,8 @@ def flatten_output(item: dict) -> dict:
     return {
         "source": "rag_export",
         "record_id": item.get("record_id"),
-        "session_id": None,
-        "user_id": None,
+        "session_id": item.get("session_id"),
+"user_id": item.get("client_id"),
 
         "message": item.get("clean_instruction"),
         "clean_instruction": item.get("clean_instruction"),
