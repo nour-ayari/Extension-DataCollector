@@ -1,6 +1,5 @@
 import { BarChart3, LayoutDashboard, MessageSquareMore, Settings2, Sparkles, X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
-import { Badge } from './Badge.jsx'
 import { cn } from '../utils/cn.js'
 
 const navigation = [
@@ -10,7 +9,7 @@ const navigation = [
   { label: 'Settings', to: '/settings', icon: Settings2 },
 ]
 
-export function Sidebar({ open, onClose, apiHealth }) {
+export function Sidebar({ open, onClose }) {
   return (
     <>
       <aside
@@ -73,27 +72,6 @@ export function Sidebar({ open, onClose, apiHealth }) {
           })}
         </nav>
 
-        <div className="mt-auto space-y-4 rounded-[24px] border border-slate-200/80 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-900/60">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-              Connection status
-            </p>
-            <Badge tone={apiHealth.status === 'connected' ? 'success' : apiHealth.status === 'offline' ? 'danger' : apiHealth.status === 'checking' ? 'info' : 'muted'} className="w-fit">
-              {apiHealth.status === 'connected'
-                ? 'Connected'
-                : apiHealth.status === 'offline'
-                  ? 'Offline'
-                  : apiHealth.status === 'checking'
-                    ? 'Checking'
-                      : 'Not configured'}
-            </Badge>
-          </div>
-
-          <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{apiHealth.message}</p>
-          <div className="rounded-2xl border border-dashed border-slate-200 px-3 py-3 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
-            {apiHealth.baseUrl}
-          </div>
-        </div>
       </aside>
 
       {open ? (

@@ -198,17 +198,21 @@ export default function Dashboard() {
       <DecisionStats decisions={decisions} isLoading={isLoading} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.55fr)]">
-        <SectionErrorBoundary key={`critical-${boundaryResetToken}`} label="Critical queue" onRetry={() => void refreshAll()}>
-          {isLoading ? <SectionSkeleton title="Critical Action Queue" lines={3} /> : <CriticalActionQueue filters={decisionFilters} onDecisionSelect={setSelectedDecisionId} />}
-        </SectionErrorBoundary>
+        <div className="min-w-0">
+          <SectionErrorBoundary key={`critical-${boundaryResetToken}`} label="Critical queue" onRetry={() => void refreshAll()}>
+            {isLoading ? <SectionSkeleton title="Critical Action Queue" lines={3} /> : <CriticalActionQueue filters={decisionFilters} onDecisionSelect={setSelectedDecisionId} />}
+          </SectionErrorBoundary>
+        </div>
 
-        <SectionErrorBoundary key={`stream-${boundaryResetToken}`} label="Activity stream" onRetry={() => void refreshAll()}>
-          {isLoading ? (
-            <SectionSkeleton title="Activity Stream" lines={5} />
-          ) : (
-            <ActivityStream selection={heatmapSelection} filters={decisionFilters} onDecisionSelect={setSelectedDecisionId} />
-          )}
-        </SectionErrorBoundary>
+        <div className="min-w-0">
+          <SectionErrorBoundary key={`stream-${boundaryResetToken}`} label="Activity stream" onRetry={() => void refreshAll()}>
+            {isLoading ? (
+              <SectionSkeleton title="Activity Stream" lines={5} />
+            ) : (
+              <ActivityStream selection={heatmapSelection} filters={decisionFilters} onDecisionSelect={setSelectedDecisionId} />
+            )}
+          </SectionErrorBoundary>
+        </div>
       </div>
 
       <SectionErrorBoundary key={`heatmap-${boundaryResetToken}`} label="Persona heatmap" onRetry={() => void refreshAll()}>

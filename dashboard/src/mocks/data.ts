@@ -281,7 +281,7 @@ export const MOCK_DECISIONS: DecisionRecord[] = [
     "Send SMS with complementary product 2 hours after order confirmation.",
     ts(5, 6)),
 
-  mkRecord('d055', 'USR-008', 'Warm', 'Positive', 'early_access', 'email', 'medium', 0.75, true,
+  mkRecord('d055', 'USR-008', 'Warm', 'Positive', 'early_access', 'email', 'medium', 0.75, false,
     "Exclusive Preview: New Season Drop",
     "Loyal warm customer with fashion category affinity. Early access deepens brand loyalty.",
     "Add to early access segment and send 48-hour exclusive preview.",
@@ -300,7 +300,7 @@ export const MOCK_DECISIONS: DecisionRecord[] = [
     "Send 3-question satisfaction survey with small reward incentive.",
     ts(8, 3)),
 
-  mkRecord('d019', 'USR-005', 'Warm', 'Neutral', 'chatbot_guide', 'chatbot', 'medium', 0.69, true,
+  mkRecord('d019', 'USR-005', 'Warm', 'Neutral', 'chatbot_guide', 'chatbot', 'medium', 0.69, false,
     "Not Sure Which to Choose? I Can Help!",
     "Browsing 5+ products in same category. Comparison fatigue detected.",
     "Trigger guided selling chatbot with comparison table feature.",
@@ -312,7 +312,7 @@ export const MOCK_DECISIONS: DecisionRecord[] = [
     "Send wishlist price drop notification with 12-hour countdown.",
     ts(3, 2)),
 
-  mkRecord('d059', 'USR-015', 'Warm', 'Neutral', 'price_nudge', 'sms', 'medium', 0.70, true,
+  mkRecord('d059', 'USR-015', 'Warm', 'Neutral', 'price_nudge', 'sms', 'medium', 0.70, false,
     "Flash Deal: 20% Off Expires Tonight",
     "Warm customer has been comparison shopping. Time-sensitive SMS offer will convert.",
     "Send SMS flash deal with deep link to cart and 8-hour countdown.",
@@ -381,7 +381,7 @@ export const MOCK_DECISIONS: DecisionRecord[] = [
     "Enrol in educational content nurture sequence.",
     ts(11, 0)),
 
-  mkRecord('d029', 'USR-010', 'Hesitant', 'Neutral', 'welcome_offer', 'email', 'low', 0.57, true,
+  mkRecord('d029', 'USR-010', 'Hesitant', 'Neutral', 'welcome_offer', 'email', 'low', 0.57, false,
     "Welcome to the Family – Start Your Journey",
     "New account created 3 days ago, no purchase. Welcome incentive needed.",
     "Trigger welcome automation with product discovery quiz.",
@@ -437,7 +437,7 @@ export const MOCK_DECISIONS: DecisionRecord[] = [
     "Enrol in 5-part re-engagement email sequence.",
     ts(16, 0)),
 
-  mkRecord('d036', 'USR-013', 'Cold', 'Positive', 'survey', 'email', 'low', 0.56, true,
+  mkRecord('d036', 'USR-013', 'Cold', 'Positive', 'survey', 'email', 'low', 0.56, false,
     "Quick Survey – Help Us Serve You Better",
     "Cold customer, 60+ days inactive but email-engaged. Survey will reactivate relationship.",
     "Send preference survey to understand current needs.",

@@ -23,6 +23,10 @@
   --page-shadow: 0 24px 80px rgba(2, 6, 23, 0.55);
 }
 
+html {
+  scroll-padding-top: 80px; /* reserve height for sticky topbar */
+}
+
 html,
 body,
 #root {

@@ -199,7 +199,7 @@ export default function OverviewPage() {
 
       <DecisionStats decisions={decisions} isLoading={isLoading} />
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)]">
         <SectionCard title="Recent decisions" description="Latest API-backed decisions with no mocked state or local shadow copies.">
           <DataTable columns={columns} data={visibleDecisions.slice(0, 8)} loading={isLoading} skeletonRows={6} />
         </SectionCard>
