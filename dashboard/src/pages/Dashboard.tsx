@@ -162,6 +162,7 @@ export default function Dashboard() {
   ]
 
   return (
+    <>
     <div className="space-y-8 animate-fade-in">
       <PageHeader
         eyebrow="Dashboard"
@@ -219,13 +220,15 @@ export default function Dashboard() {
         {isLoading ? <SectionSkeleton title="Persona-Sentiment Heatmap" lines={5} /> : <PersonaSentimentHeatmap activeSelection={heatmapSelection} filters={decisionFilters} onCellSelect={setHeatmapSelection} />}
       </SectionErrorBoundary>
 
-      {!isLoading && selectedDecisionId ? <DecisionDetailPanel decisionId={selectedDecisionId} onClose={() => setSelectedDecisionId(null)} /> : null}
-
-      {error ? (
-        <div className="rounded-[24px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
-          The dashboard data could not be loaded. Try refreshing the page state.
-        </div>
-      ) : null}
     </div>
+
+    {!isLoading && selectedDecisionId ? <DecisionDetailPanel decisionId={selectedDecisionId} onClose={() => setSelectedDecisionId(null)} /> : null}
+
+    {error ? (
+      <div className="rounded-[24px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
+        The dashboard data could not be loaded. Try refreshing the page state.
+      </div>
+    ) : null}
+  </>
   )
 }
