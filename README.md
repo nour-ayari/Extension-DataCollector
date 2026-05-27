@@ -1,208 +1,144 @@
+# Extension-DataCollector — Collecte, scoring et recommandations (Agent‑3)
 
-# PFA PROJECT
+Résumé
+------
+Ce dépôt contient une preuve de concept complète pour la collecte d'événements en navigateur, la génération de données synthétiques, un pipeline RAG (recommandations), un SDK front‑end minimal compatible extension Chrome, un serveur de simulation local et une interface dashboard légère.
 
-## Project Structure
+Objectifs
+- Collecter et normaliser les événements utilisateurs (extension + SDK + synthétiques).
+- Générer des scores utilisateurs (RFM, comportements, intent) et produire des recommandations actionnables via Agent‑3.
+- Fournir un SDK navigateur (ES2020, sans dépendances) strictement compatible avec la forme des événements de l'extension.
+- Offrir une infra locale simple pour tester le flux bout‑à‑bout (mock server + page de test + dashboard).
 
-```
+Structure du dépôt (raccourci)
+----------------------------
+- `data-processing/` — scripts d'ingestion, normalisation, génération synthétique (`synthetic_gen.py`), calcul RFM.
+- `pipeline/` — logique de scoring, agents, vector store, assembly/orchestrator et endpoints Agent‑3 (FastAPI).
+- `extension/` — code source de l'extension Chrome (payload canonical).
+- `Simulation/` — mock server, pages de test et scripts Node pour la simulation locale.
+- `dashboard/` — dashboard React (Vite) 
+- `sdk.js`, `sdk.min.js`, `types.d.ts` — SDK navigateur léger.
+- `ingest_coveo_to_supabase.py`, `pipeline_io_example.json` — exemples d'ingestion et de schéma.
 
-Extension-DataCollector/
-│
-├── data-processing/
-│   ├── supabase_fetch.py
-│   ├── bigquery_fetch.py
-│   ├── normalize_ga4.py
-│   ├── synthetic_gen.py
-│   ├── canonical_schema.py
-│   └── merge.py
-│
-├── pipeline/
-│   ├── feature_eng.py
-│   ├── aggregation.py
-│   ├── orchestrator.py
-│   ├── supabase_sync.py
-│   └── agents/
-│       ├── rfm_agent.py
-│       ├── behavior_agent.py
-│       ├── intent_agent.py
-│       └── context_agent.py
-│
-├── data/
-│   └── events_cleaned.csv
-│
-├── dashboard/          ← React dashboard (Vite + Tailwind)
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── OverviewPage.jsx
-│   │   │   ├── FeedbackPage.jsx
-│   │   │   └── SettingsPage.jsx
-│   │   ├── components/
-│   │   └── hooks/
-│   └── package.json
-│
-├── dashboard.html      ← Standalone HTML dashboard (no build step)
-│
-└── README.md
+Prérequis
+---------
+- Python 3.10+ (venv recommandé)
+- Node.js 18+ et npm (pour le dashboard / Simulation si désiré)
+- (Optionnel, production) Supabase/Postgres + pgvector
+- (Optionnel) Ollama local pour LLMs si `OLLAMA_ENABLED=true`
 
-```
+Variables d'environnement importantes
+-----------------------------------
+- `SUPABASE_URL`, `SUPABASE_KEY` — accès Supabase (nécessaire pour upserts réels)
+- `OLLAMA_ENABLED` — true|false (active l'adapter Ollama)
+- `OLLAMA_URL`, `OLLAMA_MODEL` — configuration Ollama
+- `GCP_PROJECT_ID`, `GA4_START`, `GA4_END` — si vous utilisez la récupération BigQuery
 
----
-
-## Agent 3 LLM mode
-
-Agent 3 now runs in deterministic fallback mode by default. Optional local Ollama support can be enabled with environment variables:
-
-```env
-OLLAMA_ENABLED=false
-OLLAMA_MODEL=llama3
-OLLAMA_URL=http://localhost:11434
-```
-
-If Ollama is not running or the request fails, Agent 3 returns a valid recommendation JSON using its rule-based fallback.
-
-**Agent 3 — Détails techniques**
-
-- **But :** Agent 3 est un moteur de recommandations RAG (Retrieval-Augmented Generation) destiné à produire des actions administratives concrètes pour améliorer la conversion utilisateur (emails, overlays, chatbot prompts, alertes, SMS).
-
-- **Fichiers clés :**
-	- [pipeline/agent3/rag_context.py](pipeline/agent3/rag_context.py): définition de la structure `UserContext`, fonctions `render_for_llm_prompt()`, `render_with_action()` et `render_compact()`.
-	- [pipeline/agent3/vector_store.py](pipeline/agent3/vector_store.py): encapsule l'embedder (sentence-transformers), la construction du texte de cas, l'`upsert_case()` et la recherche `search_similar_cases()` vers Supabase/pgvector.
-	- [pipeline/agent3/rag_retrieval.py](pipeline/agent3/rag_retrieval.py): logique de récupération et réordonnancement (rerank) — pondérations par similarité, outcome (converted), récence et injection de diversité.
-	- [pipeline/agent3/decision_matrix.py](pipeline/agent3/decision_matrix.py): matrice de décision statique qui mappe `(persona, sentiment)` → `ActionTemplate` (type, canal, urgence, description, trigger).
-	- [pipeline/agent3/rag_engine.py](pipeline/agent3/rag_engine.py): assemble le prompt, appelle l'LLM via l'adaptateur Ollama (`generate_llm_response()`), et fournit le fallback déterministe (`fallback_generate()`).
-	- [pipeline/agent3/seed_from_supabase.py](pipeline/agent3/seed_from_supabase.py): seeder réel qui extrait `user_features` depuis Supabase et upserte des cas structurés.
-	- [pipeline/agent3/seed_from_coveo.py](pipeline/agent3/seed_from_coveo.py): seeder qui agrège les événements de navigation (raw_coveo_events), synthétise sentiment/convert, équilibre les quotas et génère des cas de RAG diversifiés.
-	- [ingest_coveo_to_supabase.py](ingest_coveo_to_supabase.py): ingestion CSV → `raw_coveo_events` (chunked, nettoyage JSON-safe, batch insert, retries).
-	- [pipeline/agent3/test_ollama_connection.py](pipeline/agent3/test_ollama_connection.py): petit script de test pour vérifier la connexion HTTP vers Ollama.
-	- [pipeline/assembly/test_agent3_workflow.py](pipeline/assembly/test_agent3_workflow.py): test d'intégration qui simule Agent1→Agent2→Agent3 pour valider le flux et le fallback.
-
-- **Flux d'exécution (haute-niveau) :**
-	1. Normaliser le profil / événements utilisateur dans `UserContext`.
-	2. Construire l'empreinte textuelle du cas via `vector_store.build_case_text()`.
-	3. Rechercher les `TOP_K_RETRIEVAL` cas similaires via `vector_store.search_similar_cases()`.
-	4. Reranker les candidats par similarité + outcome/récence/diversité (`rag_retrieval.rerank`).
-	5. Résoudre la règle prioritaire via `decision_matrix` → `ActionTemplate`.
-	6. Appeler l'LLM (si `OLLAMA_ENABLED=true`) avec le `SYSTEM_PROMPT` + prompt assemblé (`rag_engine.assemble_prompt`).
-	7. Parser la réponse JSON de l'LLM ; en cas d'échec, utiliser `fallback_generate()` (toujours retourne JSON valide).
-	8. Loguer et `upsert_case()` dans le magasin vectoriel pour apprentissage continu.
-
-- **Variables d'environnement importantes :**
-	- `OLLAMA_ENABLED` : true|false (active la voie locale Ollama)
-	- `OLLAMA_URL` : URL du serveur Ollama (ex. `http://127.0.0.1:11434`)
-	- `OLLAMA_MODEL` : nom du modèle Ollama (ex. `qwen2.5:0.5b`)
-	- `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_DB_URL` : connexion Supabase/Postgres
-	- `EMBEDDING_MODEL` : modèle local d'embeddings (ex. `all-MiniLM-L6-v2`)
-	- `TOP_K_RETRIEVAL` : nombre de cas récupérés
-
-- **Comportement de secours (fallback) :**
-	- Le fallback est une génération déterministe dans `rag_engine.fallback_generate()` qui construit une action complète (action_type, channel, subject_line, body_copy, cta, trigger_cond, urgency, personalization, rationale) en se basant sur `ActionTemplate`, la persona, sentiment et les cas récupérés.
-	- Le fallback garantit que l'API renvoie toujours un JSON exploitable même si l'LLM est indisponible ou renvoie du texte non-JSON.
-
-- **Seeders & ingestion :**
-	- Utiliser `ingest_coveo_to_supabase.py` pour alimenter la table `raw_coveo_events` depuis le CSV Coveo.
-	- Puis exécuter `pipeline/agent3/seed_from_coveo.py` en mode `--dry-run` pour vérifier la synthèse et l'équilibrage des quotas avant upsert.
-	- `seed_from_supabase.py` importe des features utilisateur réelles et les convertit en cas RAG.
-
-- **Tests & vérifications :**
-	- Test Ollama :
-		```bash
-		python -m pipeline.agent3.test_ollama_connection
-		```
-	- Test d'intégration Agent 3 :
-		```bash
-		python -m pipeline.assembly.test_agent3_workflow
-		```
-
-- **Dépannage rapide Ollama :**
-	- Vérifier que le serveur Ollama est en écoute : `ollama serve` ou `ollama run <model>`.
-	- Lister les modèles installés : `ollama list`.
-	- Si vous utilisez `qwen2.5:0.5b`, définir `OLLAMA_MODEL=qwen2.5:0.5b` dans `.env`.
-	- Si l'adapter retourne `No Ollama response (disabled or unreachable)`, vérifier l'URL (`OLLAMA_URL`) et que le port 11434 n'est pas bloqué.
-
-**Remarques finales**
-- Le design privilégie la robustesse : même sans modèle externe, les équipes produit et opérations peuvent obtenir recommandations cohérentes via la voie fallback.
-- La mémoire d'interventions (table vectorielle Supabase + pgvector) sert à ancrer les suggestions dans des cas passés ayant de vrais outcomes, améliorant la qualité des recommandations au fil du temps.
-
-Si tu veux, je peux:
-- ajouter un extrait d'exemple de sortie JSON produite par `fallback_generate()`;
-- ajouter une checklist pour exécuter un run complet (ingest → seed → test) dans `README`.
-
-## Lightweight browser tracking SDK (extension-parity)
-
-Overview
-- Minimal ES2020 SDK that mirrors the event payloads produced by the extension/ folder.
-- Zero runtime dependencies.
-- Exposes `window.YourSDK` with: `track`, `identify`, `setConsent`, `reset`.
-- Designed for real e-commerce sites: catalog pages, product detail pages, cart, checkout, and chatbot widgets.
-
-Files
-- `sdk.js` - readable development version, no build step required.
-- `sdk.min.js` - compact minified version for production/CDN use.
-- `types.d.ts` - minimal TypeScript declarations.
-- `test/sdk.test.js` - smoke test that verifies the SDK export is present.
-
-How it works
-- Captures browser activity and normalizes it to the same structure as the Chrome extension.
-- Sends batched events to `POST ${cfg.endpoint}/v1/events`.
-- Can forward chat conversations to the intent endpoint.
-- Can subscribe to inbound actions from the backend through `SSE /v1/stream/:session_id`.
-
-Usage in a vanilla website
-1. Add the loader snippet to your site:
-
-```html
-<script>
-  (function(w,d,s,c){
-    w[c]=w[c]||{q:[],track:function(){this.q.push(arguments)}};
-    var f=d.getElementsByTagName(s)[0],j=d.createElement(s);
-    j.async=true; j.src='https://cdn.yourplatform.com/sdk.min.js';
-    j.setAttribute('data-tenant-id', 'TENANT_ID');
-    f.parentNode.insertBefore(j,f);
-  })(window,document,'script','YourSDK');
-</script>
-```
-
-2. Or include `sdk.js` directly during development:
-
-```html
-<script data-tenant-id="TENANT_ID" src="/path/to/sdk.js" async></script>
-```
-
-API
-- `window.YourSDK.track(eventName, payload)` - track an event. The payload is merged with the extension base properties.
-- `window.YourSDK.identify({ userId })` - store a hashed identifier only.
-- `window.YourSDK.setConsent(boolean)` - grant or revoke consent. Revoking consent clears the queue.
-- `window.YourSDK.reset()` - clear anonymous/session identifiers and the local queue.
-
-Recommended integration points for e-commerce apps
-- Product listing and product detail pages: view tracking.
-- Cart and checkout: add-to-cart, begin-checkout, abandonment, purchase.
-- Account and CRM flows: identify known users when they sign in.
-- Chat widgets: forward the full conversation so the intent agent can analyze it.
-
-Transport
-- Batches to `POST ${cfg.endpoint}/v1/events` (configurable via `data-endpoint`).
-- Transport fallback order: `fetch(keepalive)` -> `navigator.sendBeacon` -> `XHR`.
-- Queue is persisted in `sessionStorage` for SPA continuity.
-- Flush behavior: 50 events or 2 seconds.
-
-Inbound Actions
-- Subscribes to SSE at `/v1/stream/:session_id` and supports `SHOW_POPUP`, `SHOW_BANNER`, `TRIGGER_CHATBOT`, `INJECT_COUPON`.
-- UI injection uses Shadow DOM and basic ARIA attributes.
-
-Deployment
-- Serve `sdk.min.js` from a CDN or from your own static assets.
-- Keep `sdk.js` for local development and debugging only.
-- Point `data-endpoint` to your production ingestion backend.
-- Make sure the backend exposes the same event contract used by the extension.
-- Start with consent disabled by default if your site requires explicit opt-in.
-
-Testing
-- Run the smoke test to verify the SDK export:
+Installation (rapide)
+---------------------
+1. Créez un environnement Python et installez les dépendances :
 
 ```bash
-node test/sdk.test.js
+python -m venv .venv
+source .venv/Scripts/activate   # PowerShell: .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
-Notes & Constraints
-- This SDK intentionally mirrors the extension payload shapes and naming conventions. Do not modify event names or top-level property names.
-- Keep the production `sdk.min.js` served via CDN; use `sdk.js` locally for debugging.
+2. (Optionnel) Installer les dépendances Node pour la simulation/dashboard :
+
+```bash
+cd Simulation
+npm install
+cd ../dashboard
+npm install
+```
+
+Utilisation locale (quickstart)
+------------------------------
+1. Lancer le mock server (Simulation) :
+
+```bash
+cd Simulation
+npm start
+# écoute par défaut sur http://localhost:4000
+```
+
+2. Charger la page de test dans un navigateur : ouvrir `Simulation/test_page.html` ou lancer le serveur statique local et visiter la page. Le SDK sur la page enverra des events vers le mock server.
+
+3. Vérifier le dashboard standalone : ouvrir `dashboard.html` à la racine (version statique) ou lancer le dashboard React dev :
+
+```bash
+cd dashboard
+npm run dev
+```
+
+Pipeline & Agent‑3 (exécution)
+----------------------------
+- Les endpoints Agent‑3 sont dans `pipeline/assembly/api.py` (FastAPI). Pour exécuter localement :
+
+```bash
+# depuis l'environnement Python
+uvicorn pipeline.assembly.api:app --reload --port 8000
+```
+
+- Exécution d'un run pipeline (toy / local) :
+
+```bash
+python pipeline/run_pipeline.py
+# ou pour le flux réel (besoin de SUPABASE_*):
+python pipeline/run_real_flow.py
+```
+
+Génération synthétique et RFM
+----------------------------
+- `data-processing/synthetic_gen.py` : génère des utilisateurs synthétiques. Le champ `rfm_score` est contraint à l'intervalle 0–100.
+- `data-processing/bigquery_fetch.py` : contient `compute_rfm()` qui calcule et normalise `rfm_score` sur 0–100.
+
+SDK navigateur (usage)
+----------------------
+- Inclus `sdk.js` (dev) et `sdk.min.js` (minifié). Loader snippet :
+
+```html
+<script data-tenant-id="YOUR_TENANT" src="/path/to/sdk.min.js" async></script>
+```
+
+- API publique minimale exposée sur `window.YourSDK` : `track`, `identify`, `setConsent`, `reset`.
+- Le SDK batch et envoie vers `POST ${endpoint}/v1/events`, forwarde les conversations de chat vers `/v1/intent` et s'abonne aux actions entrantes via SSE `/v1/stream/:session_id`.
+
+Simulation & tests
+------------------
+- `Simulation/mock_server.js` et `mock_server_native.js` fournissent des endpoints `/v1/events`, `/v1/intent`, `/v1/trigger_session` et SSE `/v1/stream/:session_id` pour tester les flows.
+- `Simulation/test_page.html` est une page de test qui charge le SDK et simule des events et conversations.
+
+Dashboard
+---------
+- `dashboard.html` : version standalone qui lit les logs et permet d'envoyer du feedback.
+- `dashboard/` : application React (Vite) avec WebSocket pour recevoir `ws://.../ws/decisions` si Agent‑3 est démarré.
+
+Remarques d'implémentation
+--------------------------
+- Le pipeline possède un mode fallback déterministe si l'LLM local (Ollama) est indisponible : Agent‑3 renverra toujours un JSON valide.
+
+Dépannage rapide
+-----------------
+- `node` non reconnu → installez Node.js 18+ et assurez‑vous que `npm` est dans le PATH.
+- `Cannot find package '@faker-js/faker'` → exécuter `npm install` dans `Simulation` si vous lancez les scripts qui l'utilisent.
+- Problèmes Supabase → vérifier `SUPABASE_URL` et `SUPABASE_KEY` et exécuter la création de tables SQL indiquée dans les logs si nécessaire.
+
+Contribuer
+----------
+- Respectez les conventions du dépôt : tests unitaires Python sous `tests/unit`, scripts de simulation sous `Simulation/`.
+- Avant PR : exécuter `flake8`/`black` (selon configuration) et lancer les tests unitaires.
+
+Prochaines tâches suggérées
+--------------------------
+- Ajouter un test automatisé de parité SDK ↔ extension (`canonical_schema`) pour garantir que le SDK n'altère pas le schéma.
+- Ajouter un setup script `dev.sh` / `dev.ps1` pour démarrer rapidement mock + dashboard + Agent‑3.
+
+Fichiers utiles
+---------------
+- `pipeline/run_pipeline.py` — runner pipeline local
+- `pipeline/assembly/api.py` — API Agent‑3 (FastAPI)
+- `data-processing/synthetic_gen.py` — générateur synthétique
+- `Simulation/test_page.html` — page de test SDK
+- `sdk.js`, `sdk.min.js` — SDK front
