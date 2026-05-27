@@ -1,6 +1,9 @@
 import { useSyncExternalStore } from 'react'
+import { MOCK_DECISIONS } from '../mocks/data'
 import { notify } from '../services/notifications'
 import type { DecisionRecord } from '../types/api'
+
+const IS_MOCK = import.meta.env.VITE_USE_MOCK_DATA === 'true'
 
 export type WebSocketConnectionStatus = 'connected' | 'reconnecting' | 'disconnected'
 
@@ -27,6 +30,8 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 let reconnectAttempts = 0
 let shouldReconnect = false
 let previousStatus: WebSocketConnectionStatus | null = null
+let mockIntervalId: ReturnType<typeof setInterval> | null = null
+let mockTimeoutId: ReturnType<typeof setTimeout> | null = null
 
 let state: DecisionWebSocketState = {
   latestEvent: null,
@@ -131,10 +136,36 @@ function connect(url: string) {
   }
 }
 
+function startMockWebSocket() {
+  mockTimeoutId = setTimeout(() => {
+    reconnectAttempts = 0
+    setStatus('connected')
+
+    mockIntervalId = setInterval(() => {
+      if (!shouldReconnect) return
+      const base = MOCK_DECISIONS[Math.floor(Math.random() * MOCK_DECISIONS.length)]
+      const liveId = `live-${Date.now()}`
+      const liveRecord: DecisionRecord = {
+        ...base,
+        id: liveId,
+        decision_id: liveId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+      state = { ...state, latestEvent: { type: 'new_decision', data: liveRecord } }
+      emit()
+    }, 10_000)
+  }, 600)
+}
+
 function ensureConnected() {
   if (!shouldReconnect) {
     shouldReconnect = true
-    connect(DEFAULT_WS_URL)
+    if (IS_MOCK) {
+      startMockWebSocket()
+    } else {
+      connect(DEFAULT_WS_URL)
+    }
   }
 }
 
@@ -151,6 +182,9 @@ function subscribe(listener: () => void) {
 
     if (listeners.size === 0) {
       shouldReconnect = false
+
+      if (mockIntervalId !== null) { clearInterval(mockIntervalId); mockIntervalId = null }
+      if (mockTimeoutId !== null) { clearTimeout(mockTimeoutId); mockTimeoutId = null }
 
       if (reconnectTimer !== null) {
         clearTimeout(reconnectTimer)

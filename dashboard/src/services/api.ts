@@ -1,3 +1,4 @@
+import { MOCK_DECISIONS } from '../mocks/data'
 import type {
   ActionChannel,
   ActionType,
@@ -5,6 +6,8 @@ import type {
   DecisionRecord,
   PredictionApiResponse,
 } from '../types/api'
+
+const IS_MOCK = import.meta.env.VITE_USE_MOCK_DATA === 'true'
 
 type ApiEnv = ImportMetaEnv & {
   readonly VITE_API_BASE_URL?: string
@@ -89,6 +92,8 @@ function normalizeLogToDecision(raw: Record<string, unknown>): DecisionRecord {
 }
 
 export async function fetchAllDecisions(): Promise<DecisionRecord[]> {
+  if (IS_MOCK) return Promise.resolve(MOCK_DECISIONS)
+
   try {
     const rows = await requestJson<Record<string, unknown>[]>('/logs?limit=500')
     return rows.map(normalizeLogToDecision)
@@ -103,6 +108,15 @@ export async function fetchRecommendation(userId: string): Promise<PredictionApi
 
   if (trimmedUserId.length === 0) {
     throw new Error('userId is required')
+  }
+
+  if (IS_MOCK) {
+    const decision = MOCK_DECISIONS.find(d => d.user_id === trimmedUserId) ?? MOCK_DECISIONS[0]
+    return Promise.resolve({
+      agent1: {} as never,
+      agent2: {} as never,
+      agent3_output: decision as never,
+    })
   }
 
   try {

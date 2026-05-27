@@ -320,8 +320,8 @@ function computeSummary(current: DecisionRecord[], previous: DecisionRecord[]): 
   return {
     currentTotal: current.length,
     previousTotal: previous.length,
-    currentSuccessRate: current.length > 0 ? (current.filter(isSuccess).length / current.length) * 100 : null,
-    previousSuccessRate: previous.length > 0 ? (previous.filter(isSuccess).length / previous.length) * 100 : null,
+    currentSuccessRate: current.length > 0 ? current.filter(isConverted).length / current.length : null,
+    previousSuccessRate: previous.length > 0 ? previous.filter(isConverted).length / previous.length : null,
     currentAvgConfidence: averageConfidence(current),
     previousAvgConfidence: averageConfidence(previous),
     currentAvgResponseTime: averageResponseTimeMinutes(current),
@@ -474,7 +474,7 @@ function averageConfidenceDelta(current: number | null, previous: number | null)
     return undefined
   }
 
-  const delta = current - previous
+  const delta = (current - previous) * 100
   return `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} pts`
 }
 
@@ -492,11 +492,11 @@ function successRateDelta(current: number | null, previous: number | null): stri
     return undefined
   }
 
-  const delta = current - previous
+  const delta = (current - previous) * 100
   return `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} pts`
 }
 
-function miniMetricCard({ label, value, helper }: { label: string; value: string; helper: string }) {
+function MiniMetricCard({ label, value, helper }: { label: string; value: string; helper: string }) {
   return (
     <div className="rounded-[22px] border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
       <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">{label}</p>
@@ -647,7 +647,9 @@ export function DecisionStats({ decisions, isLoading = false, className = '' }: 
           ) : null}
 
           <div className="grid gap-3 sm:grid-cols-3">
-            {currentTotals.map((entry) => miniMetricCard({ label: entry.label, value: formatMetricValue(entry.value), helper: `Decisions in the last ${entry.label}` }))}
+            {currentTotals.map((entry) => (
+              <MiniMetricCard key={entry.label} label={entry.label} value={formatMetricValue(entry.value)} helper={`Decisions in the last ${entry.label}`} />
+            ))}
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

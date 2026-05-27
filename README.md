@@ -1,5 +1,5 @@
 
-# Extension-DataCollector
+# PFA PROJECT
 
 ## Project Structure
 
@@ -125,3 +125,84 @@ If Ollama is not running or the request fails, Agent 3 returns a valid recommend
 Si tu veux, je peux:
 - ajouter un extrait d'exemple de sortie JSON produite par `fallback_generate()`;
 - ajouter une checklist pour exécuter un run complet (ingest → seed → test) dans `README`.
+
+## Lightweight browser tracking SDK (extension-parity)
+
+Overview
+- Minimal ES2020 SDK that mirrors the event payloads produced by the extension/ folder.
+- Zero runtime dependencies.
+- Exposes `window.YourSDK` with: `track`, `identify`, `setConsent`, `reset`.
+- Designed for real e-commerce sites: catalog pages, product detail pages, cart, checkout, and chatbot widgets.
+
+Files
+- `sdk.js` - readable development version, no build step required.
+- `sdk.min.js` - compact minified version for production/CDN use.
+- `types.d.ts` - minimal TypeScript declarations.
+- `test/sdk.test.js` - smoke test that verifies the SDK export is present.
+
+How it works
+- Captures browser activity and normalizes it to the same structure as the Chrome extension.
+- Sends batched events to `POST ${cfg.endpoint}/v1/events`.
+- Can forward chat conversations to the intent endpoint.
+- Can subscribe to inbound actions from the backend through `SSE /v1/stream/:session_id`.
+
+Usage in a vanilla website
+1. Add the loader snippet to your site:
+
+```html
+<script>
+  (function(w,d,s,c){
+    w[c]=w[c]||{q:[],track:function(){this.q.push(arguments)}};
+    var f=d.getElementsByTagName(s)[0],j=d.createElement(s);
+    j.async=true; j.src='https://cdn.yourplatform.com/sdk.min.js';
+    j.setAttribute('data-tenant-id', 'TENANT_ID');
+    f.parentNode.insertBefore(j,f);
+  })(window,document,'script','YourSDK');
+</script>
+```
+
+2. Or include `sdk.js` directly during development:
+
+```html
+<script data-tenant-id="TENANT_ID" src="/path/to/sdk.js" async></script>
+```
+
+API
+- `window.YourSDK.track(eventName, payload)` - track an event. The payload is merged with the extension base properties.
+- `window.YourSDK.identify({ userId })` - store a hashed identifier only.
+- `window.YourSDK.setConsent(boolean)` - grant or revoke consent. Revoking consent clears the queue.
+- `window.YourSDK.reset()` - clear anonymous/session identifiers and the local queue.
+
+Recommended integration points for e-commerce apps
+- Product listing and product detail pages: view tracking.
+- Cart and checkout: add-to-cart, begin-checkout, abandonment, purchase.
+- Account and CRM flows: identify known users when they sign in.
+- Chat widgets: forward the full conversation so the intent agent can analyze it.
+
+Transport
+- Batches to `POST ${cfg.endpoint}/v1/events` (configurable via `data-endpoint`).
+- Transport fallback order: `fetch(keepalive)` -> `navigator.sendBeacon` -> `XHR`.
+- Queue is persisted in `sessionStorage` for SPA continuity.
+- Flush behavior: 50 events or 2 seconds.
+
+Inbound Actions
+- Subscribes to SSE at `/v1/stream/:session_id` and supports `SHOW_POPUP`, `SHOW_BANNER`, `TRIGGER_CHATBOT`, `INJECT_COUPON`.
+- UI injection uses Shadow DOM and basic ARIA attributes.
+
+Deployment
+- Serve `sdk.min.js` from a CDN or from your own static assets.
+- Keep `sdk.js` for local development and debugging only.
+- Point `data-endpoint` to your production ingestion backend.
+- Make sure the backend exposes the same event contract used by the extension.
+- Start with consent disabled by default if your site requires explicit opt-in.
+
+Testing
+- Run the smoke test to verify the SDK export:
+
+```bash
+node test/sdk.test.js
+```
+
+Notes & Constraints
+- This SDK intentionally mirrors the extension payload shapes and naming conventions. Do not modify event names or top-level property names.
+- Keep the production `sdk.min.js` served via CDN; use `sdk.js` locally for debugging.
