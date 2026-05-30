@@ -1,6 +1,8 @@
-"""Ingest Coveo SIGIR browsing events into the raw Supabase layer.
+"""Ingest Coveo SIGIR browsing events into `coveo_events`.
 
-This targets only `raw_coveo_events` and does not bypass feature engineering.
+Reads `browsing_train.csv` in chunks, normalizes events to canonical names,
+and inserts clean rows into `coveo_events`. Prints DDL at startup; does
+not execute DDL.
 """
 
 from __future__ import annotations
@@ -10,6 +12,7 @@ import os
 import math
 from pathlib import Path
 from typing import Any
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -18,7 +21,7 @@ from supabase import create_client
 
 load_dotenv()
 
-TARGET_TABLE = "raw_coveo_events"
+TARGET_TABLE = "coveo_events"
 DEFAULT_INPUT = "browsing_train.csv"
 DEFAULT_CHUNK_SIZE = 10_000
 DEFAULT_BATCH_SIZE = 200
@@ -29,6 +32,36 @@ COLUMN_MAP = {
     "product_action": "product_action",
     "product_sku_hash": "product_sku",
     "server_timestamp_epoch_ms": "event_timestamp",
+}
+
+# Canonical events and mapping (Coveo raw -> canonical)
+CANONICAL_EVENTS = {
+    "page_view",
+    "search_performed",
+    "add_to_cart",
+    "remove_from_cart",
+    "checkout",
+    "purchase",
+}
+
+COVEO_TO_CANONICAL: dict[tuple[str, str | None], str] = {
+    ("pageview",    None):        "page_view",
+    ("pageview",    ""):          "page_view",
+    ("listing",     None):        "page_view",
+    ("click",       None):        "page_view",
+    ("event",       "detail"):    "page_view",
+    ("event",       "quickview"): "page_view",
+    ("product",     "detail"):    "page_view",
+    ("product",     "view"):      "page_view",
+    ("search",      None):        "search_performed",
+    ("event",       "add"):       "add_to_cart",
+    ("cart",        "add"):       "add_to_cart",
+    ("event",       "remove"):    "remove_from_cart",
+    ("cart",        "remove"):    "remove_from_cart",
+    ("event",       "checkout"):  "checkout",
+    ("event",       "purchase"):  "purchase",
+    ("transaction", "purchase"):  "purchase",
+    ("transaction", None):        "purchase",
 }
 
 
@@ -97,6 +130,62 @@ def _coerce_timestamp(value: Any) -> int | None:
         return int(float(value))
     except Exception:
         return None
+
+
+def _print_ddl() -> None:
+    ddl = """
+CREATE TABLE IF NOT EXISTS coveo_events (
+    id                bigserial PRIMARY KEY,
+    session_id        text        NOT NULL,
+    event_name        text        NOT NULL,
+    product_action    text,
+    product_sku       text,
+    event_timestamp   bigint      NOT NULL,
+    raw_payload       jsonb,
+    created_at        timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS coveo_events_session_idx
+    ON coveo_events(session_id);
+CREATE INDEX IF NOT EXISTS coveo_events_event_name_idx
+    ON coveo_events(event_name);
+CREATE INDEX IF NOT EXISTS coveo_events_timestamp_idx
+    ON coveo_events(session_id, event_timestamp);
+"""
+    print("DDL for coveo_events (create in Supabase SQL editor if needed):")
+    print(ddl)
+
+
+def normalize_event(event_type: Any, product_action: Any) -> str | None:
+    et = str(event_type).strip().lower() if event_type is not None else ""
+    pa_raw = str(product_action).strip().lower() if product_action is not None else ""
+    pa = pa_raw if pa_raw not in ("", "none", "nan") else None
+
+    # direct pair mapping
+    result = COVEO_TO_CANONICAL.get((et, pa))
+    if result:
+        return result
+
+    # fallback to event_type-only mapping
+    result = COVEO_TO_CANONICAL.get((et, None))
+    if result:
+        return result
+
+    combined = f"{et} {pa or ''}".strip()
+    if "purchase" in combined or "transaction" in combined:
+        return "purchase"
+    if "checkout" in combined:
+        return "checkout"
+    if "add" in combined and ("cart" in combined or et == "event"):
+        return "add_to_cart"
+    if "remove" in combined:
+        return "remove_from_cart"
+    if "search" in combined:
+        return "search_performed"
+    if et in ("pageview", "listing", "page"):
+        return "page_view"
+
+    return None
 
 
 def _normalize_chunk(chunk: pd.DataFrame) -> pd.DataFrame:
@@ -168,50 +257,80 @@ def ingest_coveo_to_supabase(
     client = _create_supabase_client()
     csv_path = _resolve_input_path(input_path)
 
-    total_rows = 0
+    _print_ddl()
+
+    total_raw = 0
     total_inserted = 0
-    total_skipped = 0
-    batch_buffer: list[dict[str, Any]] = []
+    total_dropped = 0
+    global_event_counts: dict[str, int] = defaultdict(int)
 
     print(f"Reading {csv_path} in chunks of {chunk_size:,}...")
 
     for chunk_index, chunk in enumerate(pd.read_csv(csv_path, chunksize=chunk_size, low_memory=False), start=1):
-        total_rows += len(chunk)
-        normalized = _normalize_chunk(chunk)
-        if normalized.empty:
-            total_skipped += len(chunk)
-            print(f"Chunk {chunk_index}: no valid rows")
-            continue
+        raw_count = len(chunk)
+        total_raw += raw_count
 
-        records = [
-            {key: _clean_json_value(value) for key, value in record.items()}
-            for record in normalized.to_dict(orient="records")
-        ]
-        total_skipped += len(chunk) - len(records)
+        # rename columns and ensure presence
+        chunk = chunk.rename(columns={k: v for k, v in COLUMN_MAP.items() if k in chunk.columns})
 
-        batch_buffer.extend(records)
-        while len(batch_buffer) >= batch_size:
-            current_batch = batch_buffer[:batch_size]
-            batch_buffer = batch_buffer[batch_size:]
-            if _insert_with_retry(client, current_batch):
-                total_inserted += len(current_batch)
-                print(f"Batch {chunk_index}: inserted {total_inserted:,} rows so far")
+        # apply normalization per row
+        records_in_batch: list[dict[str, Any]] = []
+        per_chunk_counts: dict[str, int] = defaultdict(int)
+        dropped_in_chunk = 0
+
+        for row in chunk.to_dict(orient="records"):
+            session_id = _safe_value(row.get("session_id"))
+            raw_event = row.get("event_name")
+            product_action = row.get("product_action")
+            event_ts = _coerce_timestamp(row.get("event_timestamp"))
+
+            canonical = normalize_event(raw_event, product_action)
+
+            if not session_id or canonical is None or event_ts is None:
+                dropped_in_chunk += 1
+                continue
+
+            per_chunk_counts[canonical] += 1
+            global_event_counts[canonical] += 1
+
+            payload = {k: _clean_json_value(v) for k, v in row.items()}
+
+            records_in_batch.append(
+                {
+                    "session_id": session_id,
+                    "event_name": canonical,
+                    "product_action": _safe_value(product_action),
+                    "product_sku": _safe_value(row.get("product_sku")),
+                    "event_timestamp": int(event_ts),
+                    "raw_payload": payload,
+                }
+            )
+
+        # insert in batches
+        for start in range(0, len(records_in_batch), batch_size):
+            batch = records_in_batch[start : start + batch_size]
+            if not batch:
+                continue
+            if _insert_with_retry(client, batch):
+                total_inserted += len(batch)
             else:
-                total_skipped += len(current_batch)
-                print(f"Batch {chunk_index}: skipped failed batch of {len(current_batch)} rows")
+                total_dropped += len(batch)
 
-    if batch_buffer:
-        if _insert_with_retry(client, batch_buffer):
-            total_inserted += len(batch_buffer)
-            print(f"Final batch inserted, total {total_inserted:,} rows")
-        else:
-            total_skipped += len(batch_buffer)
-            print(f"Final batch skipped after retry, {len(batch_buffer)} rows")
+        total_dropped += dropped_in_chunk
 
-    print("\nIngestion summary")
-    print(f"Total rows processed: {total_rows}")
-    print(f"Total inserted: {total_inserted}")
-    print(f"Total skipped: {total_skipped}")
+        # chunk observability
+        print(
+            f"Chunk {chunk_index} | raw={raw_count} | valid={len(records_in_batch)} | dropped={dropped_in_chunk} | {dict(per_chunk_counts)}"
+        )
+
+    # final summary
+    print("\n══════════════════════════════════")
+    print(" INGESTION COMPLETE")
+    print(f" Total raw rows read   : {total_raw}")
+    print(f" Total inserted        : {total_inserted}")
+    print(f" Total dropped         : {total_dropped}")
+    print(f" Global event dist.    : {dict(global_event_counts)}")
+    print("══════════════════════════════════")
 
 
 def main() -> None:

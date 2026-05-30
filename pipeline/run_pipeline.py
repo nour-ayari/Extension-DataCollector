@@ -39,6 +39,11 @@ def _load_get_recommendations_for_users():
     return getattr(module, "get_recommendations_for_users")
 
 
+def _load_build_coveo_sessions():
+    module = importlib.import_module("pipeline.agent3.build_coveo_sessions")
+    return getattr(module, "build_coveo_sessions")
+
+
 def _load_user_features(limit: int | None = None) -> pd.DataFrame:
     client = _get_supabase_client()
     try:
@@ -296,6 +301,7 @@ def run_pipeline(
     url: str | None = None,
     limit: int | None = None,
     dry_run: bool = False,
+    build_coveo: bool = False,
     seed_coveo: bool = False,
     verify_user_id: str | None = None,
 ) -> dict[str, Any]:
@@ -307,6 +313,7 @@ def run_pipeline(
 
     agent2_lookup = _load_agent2_lookup_for_stats(user_features)
     get_recommendations_for_users = _load_get_recommendations_for_users()
+    build_coveo_sessions = _load_build_coveo_sessions()
 
     if dry_run:
         logger.info("Dry-run requested; recommendations will still be computed but no seeding is performed.")
@@ -322,6 +329,13 @@ def run_pipeline(
     except Exception as exc:
         errors += 1
         logger.error("Agent 3 pipeline failed: %s", exc)
+
+    if build_coveo or seed_coveo:
+        try:
+            build_coveo_sessions(limit=limit)
+        except Exception as exc:
+            errors += 1
+            logger.warning("Coveo session build failed: %s", exc)
 
     if seed_coveo:
         try:
@@ -363,6 +377,7 @@ def main() -> None:
     parser.add_argument("--url", default=os.getenv("AGENT3_URL"), help="Agent 3 HTTP URL used in http mode")
     parser.add_argument("--limit", type=int, default=None, help="Limit rows processed from user_features")
     parser.add_argument("--dry-run", action="store_true", help="Run without seeding Coveo interventions")
+    parser.add_argument("--build-coveo", action="store_true", help="Build coveo_sessions from coveo_events before seeding")
     parser.add_argument("--seed-coveo", action="store_true", help="Seed intervention_cases from Coveo sessions")
     parser.add_argument("--verify", dest="verify_user_id", default=None, help="Verify linkage for a specific user_id")
     args = parser.parse_args()
@@ -373,6 +388,7 @@ def main() -> None:
         url=args.url,
         limit=args.limit,
         dry_run=args.dry_run,
+        build_coveo=args.build_coveo,
         seed_coveo=args.seed_coveo,
         verify_user_id=args.verify_user_id,
     )

@@ -238,6 +238,11 @@ def generate_recommendation(
             try:
                 result = json.loads(cleaned)
             except Exception as exc:
+                # Print the raw LLM response to aid debugging of prompt/format issues
+                try:
+                    print(f"RAW LLM RESPONSE: {llm_response}")
+                except Exception:
+                    pass
                 logger.warning("Agent 3 LLM response parse failed, using fallback: %s", exc)
                 result = fallback_generate(action_template, retrieved_cases, user_context)
 
