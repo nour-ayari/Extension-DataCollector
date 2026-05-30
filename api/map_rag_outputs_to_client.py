@@ -22,7 +22,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-EVENTS_TABLE = "events"
+EVENTS_TABLE = "events_cleaned"
 
 RAG_INPUT_PATH = Path("reports/rag_export/rag_output.json")
 RAG_OUTPUT_PATH = Path("reports/rag_export/mapped_rag_output.json")
