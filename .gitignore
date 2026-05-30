@@ -64,4 +64,5 @@ Thumbs.db
 data/
 data/events_cleaned.csv 
 **/**.csv
+browsing_train.csv
 

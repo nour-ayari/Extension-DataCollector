@@ -1,18 +1,14 @@
 {
-  "name": "simulation",
+  "name": "extension-data-collector-mock",
   "version": "1.0.0",
-  "description": "",
-  "type": "module",
-  "main": "behaviors.js",
+  "private": true,
+  "description": "Mock backend for SDK integration tests",
+  "main": "mock_server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node mock_server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@faker-js/faker": "^10.4.0",
-    "p-queue": "^9.1.1",
-    "puppeteer": "^24.40.0"
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
   }
 }

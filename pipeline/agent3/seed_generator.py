@@ -193,6 +193,9 @@ def main() -> None:
                     action_detail=detail,
                     behavioral_context=ctx,
                     converted=converted,
+                    source_type="synthetic_generated",
+                    parent_session_id=None,
+                    source_session_id=None,
                 )
                 total += 1
                 print(f"[{total:03d}] {persona:15s} x {sentiment:10s} -> {action_type:15s} | {preset['name']:18s} | converted={converted}")

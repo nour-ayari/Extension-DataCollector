@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>SDK Integration Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 16px; }
+    .chat-widget { width: 360px; height: 300px; border: 1px solid #ddd; padding: 8px; overflow:auto }
+    .controls { margin-top: 12px }
+    .msg.user { color: #0b66ff }
+    .msg.bot { color: #222 }
+    button { margin-right: 8px }
+  </style>
+  <!-- Load SDK from repo root; debug enabled so logs appear in console -->
+  <script data-tenant-id="test_tenant" data-endpoint="http://localhost:4000" data-debug="true" src="/sdk.js" async></script>
+</head>
+<body>
+  <h1>SDK Integration Test</h1>
+  <p>This page demonstrates chat capture, event tracking, and session trigger against the mock server at <code>http://localhost:4000</code>.</p>
+
+  <div>
+    <strong>Chat widget (simulated)</strong>
+    <div id="chat" class="chat-widget" data-chat-widget>
+      <div class="msg bot">Hello! How can I help?</div>
+    </div>
+    <div class="controls">
+      <input id="chatInput" placeholder="Type a message" style="width:260px" />
+      <button id="sendBtn">Send (user)</button>
+      <button id="botReply">Bot reply</button>
+    </div>
+  </div>
+
+  <div style="margin-top:18px">
+    <button id="trackClick">Track custom event</button>
+    <button id="identify">Identify (set hashed id)</button>
+    <button id="consentOn">Set consent = true</button>
+    <button id="consentOff">Set consent = false</button>
+    <button id="triggerSession">Trigger session (manual)</button>
+    <button id="showStorage">Show sessionStorage keys (console)</button>
+  </div>
+
+  <script>
+    // Wait until SDK loaded
+    function whenSDK(cb) {
+      if (window.YourSDK) return cb();
+      const t = setInterval(() => { if (window.YourSDK) { clearInterval(t); cb(); } }, 50);
+    }
+
+    whenSDK(() => {
+      console.log('YourSDK available', window.YourSDK._debug);
+      document.getElementById('sendBtn').addEventListener('click', () => {
+        const input = document.getElementById('chatInput');
+        const text = input.value.trim(); if (!text) return; input.value = '';
+        const el = document.createElement('div'); el.className = 'msg user'; el.innerText = text; document.getElementById('chat').appendChild(el);
+        // also track an event via public API
+        window.YourSDK.track('chat_user_message', { text: text });
+      });
+
+      document.getElementById('botReply').addEventListener('click', () => {
+        const el = document.createElement('div'); el.className = 'msg bot'; el.innerText = 'Sure — here is some info about that product.'; document.getElementById('chat').appendChild(el);
+      });
+
+      document.getElementById('trackClick').addEventListener('click', () => window.YourSDK.track('test_click', { label: 'demo_button' }));
+      document.getElementById('identify').addEventListener('click', () => window.YourSDK.identify({ userId: 'user_hash_123' }));
+      document.getElementById('consentOn').addEventListener('click', () => window.YourSDK.setConsent(true));
+      document.getElementById('consentOff').addEventListener('click', () => window.YourSDK.setConsent(false));
+      document.getElementById('triggerSession').addEventListener('click', () => {
+        const sid = (sessionStorage.getItem('your_sdk_session_meta') && JSON.parse(sessionStorage.getItem('your_sdk_session_meta')).sessionId) || null;
+        fetch('http://localhost:4000/v1/trigger_session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sid, anonymous_id: localStorage.getItem('your_sdk_anon_id') }) }).then(r=>r.json()).then(j=>console.log('trigger response', j)).catch(console.error);
+      });
+
+      document.getElementById('showStorage').addEventListener('click', () => {
+        console.log('sessionStorage keys:');
+        for (let i=0;i<sessionStorage.length;i++){ const k=sessionStorage.key(i); console.log(k, sessionStorage.getItem(k)); }
+      });
+    });
+  </script>
+</body>
+</html>

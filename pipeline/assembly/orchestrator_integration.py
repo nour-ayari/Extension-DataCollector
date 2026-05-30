@@ -25,6 +25,8 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
+from agent2_join import fetch_agent2_latest, enrich_with_agent2, get_agent2_coverage_stats
+
 load_dotenv()
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,8 @@ MIN_SCORE_THRESHOLD = float(os.getenv("AGENT3_MIN_SCORE", 20.0))
 
 # Only call Agent 3 when sentiment confidence is high enough
 MIN_SENTIMENT_CONF  = float(os.getenv("AGENT3_MIN_CONF", 0.60))
+
+_AGENT2_LOOKUP: dict[str, dict] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -109,24 +113,21 @@ def _call_agent3_http(row: pd.Series) -> Optional[dict]:
         logger.debug(f"Skipping {user_id} — score {score:.1f} below threshold")
         return None
 
-    # Get sentiment from Agent 2 output columns (if they exist in user_features)
-    # Your pipeline should add these columns after Agent 2 runs.
-    # Falls back to behavioral inference if not present.
-    if "sentiment" in row.index and "sentiment_confidence" in row.index:
-        sentiment  = str(row["sentiment"])
-        confidence = float(row["sentiment_confidence"])
-    else:
-        sentiment, confidence = _infer_sentiment(row)
+    sentiment, confidence, intent, churn_risk = enrich_with_agent2(row, _AGENT2_LOOKUP)
 
     if confidence < MIN_SENTIMENT_CONF:
         sentiment, confidence = "Neutral", 0.60   # safe default
+
+    payload_user_meta = _build_user_meta(row)
+    payload_user_meta["intent"] = intent
+    payload_user_meta["churn_risk"] = churn_risk
 
     payload = {
         "user_id":    user_id,
         "persona":    persona,
         "sentiment":  sentiment,
         "confidence": confidence,
-        "user_meta":  _build_user_meta(row),
+        "user_meta":  payload_user_meta,
     }
 
     try:
@@ -166,14 +167,14 @@ def _call_agent3_direct(row: pd.Series) -> Optional[dict]:
     if score < MIN_SCORE_THRESHOLD:
         return None
 
-    if "sentiment" in row.index and "sentiment_confidence" in row.index:
-        sentiment  = str(row["sentiment"])
-        confidence = float(row["sentiment_confidence"])
-    else:
-        sentiment, confidence = _infer_sentiment(row)
+    sentiment, confidence, intent, churn_risk = enrich_with_agent2(row, _AGENT2_LOOKUP)
 
     if confidence < MIN_SENTIMENT_CONF:
         sentiment, confidence = "Neutral", 0.60
+
+    user_meta = _build_user_meta(row)
+    user_meta["intent"] = intent
+    user_meta["churn_risk"] = churn_risk
 
     try:
         result = run(AgentInput(
@@ -181,7 +182,7 @@ def _call_agent3_direct(row: pd.Series) -> Optional[dict]:
             persona    = persona,
             sentiment  = sentiment,
             confidence = confidence,
-            user_meta  = _build_user_meta(row),
+            user_meta  = user_meta,
         ))
         return result.__dict__
     except Exception as e:
@@ -213,6 +214,24 @@ def get_recommendations_for_users(
         DataFrame with recommendation results joined back to user_ids
     """
     call_fn = _call_agent3_http if mode == "http" else _call_agent3_direct
+
+    try:
+        from supabase import create_client
+
+        _sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
+        agent2_lookup = fetch_agent2_latest(_sb)
+        stats = get_agent2_coverage_stats(agent2_lookup, user_features)
+        logger.info(
+            f"Agent2 coverage: {stats['users_with_agent2']}/{stats['total_users']}"
+            f" ({stats['coverage_pct']:.1f}%) | "
+            f"inferred: {stats['inferred_pct']:.1f}%"
+        )
+    except Exception as e:
+        logger.warning(f"Agent2 fetch failed, using full behavioral inference: {e}")
+        agent2_lookup = {}
+
+    global _AGENT2_LOOKUP
+    _AGENT2_LOOKUP = agent2_lookup
 
     # Filter to users worth scoring
     eligible = user_features[

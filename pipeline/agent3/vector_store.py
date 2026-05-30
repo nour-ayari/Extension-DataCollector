@@ -71,6 +71,13 @@ def build_case_text(
     return f"persona:{persona} sentiment:{sentiment} action:{action_type} context:{context}"
 
 
+def _normalize_source_type(source_type: Optional[str]) -> str:
+    value = (source_type or "real").strip().lower()
+    if value not in {"real", "synthetic_clone", "synthetic_generated"}:
+        return "real"
+    return value
+
+
 def upsert_case(
     persona: str,
     sentiment: str,
@@ -79,6 +86,13 @@ def upsert_case(
     action_detail: str,
     behavioral_context: str | UserContext = "",   # replaces products
     converted: bool = False,
+    source_type: str = "real",
+    parent_session_id: Optional[str] = None,
+    source_session_id: Optional[str] = None,
+    predicted_success: Optional[float] = None,
+    historical_success_rate: Optional[float] = None,
+    retrieval_rank_score: Optional[float] = None,
+    source_metadata: Optional[dict] = None,
 ) -> dict:
     """
     Insert a new intervention case into the vector store.
@@ -89,6 +103,7 @@ def upsert_case(
     text = build_case_text(persona, sentiment, action_type, behavioral_context, converted=converted)
     context_text = behavioral_context.render_compact() if isinstance(behavioral_context, UserContext) else behavioral_context
     embedding = embed(text)
+    source_type = _normalize_source_type(source_type)
 
     row = {
         "persona":      persona,
@@ -98,10 +113,33 @@ def upsert_case(
         "action_detail": action_detail,
         "context":      context_text,
         "converted":    converted,
+        "source_type":  source_type,
+        "parent_session_id": parent_session_id,
+        "source_session_id": source_session_id,
+        "predicted_success": predicted_success,
+        "historical_success_rate": historical_success_rate,
+        "retrieval_rank_score": retrieval_rank_score,
+        "source_metadata": source_metadata,
         "embedding":    embedding,
     }
 
-    result = client.table("intervention_cases").insert(row).execute()
+    try:
+        result = client.table("intervention_cases").insert(row).execute()
+    except Exception:
+        legacy_row = {
+            key: value
+            for key, value in row.items()
+            if key not in {
+                "source_type",
+                "parent_session_id",
+                "source_session_id",
+                "predicted_success",
+                "historical_success_rate",
+                "retrieval_rank_score",
+                "source_metadata",
+            }
+        }
+        result = client.table("intervention_cases").insert(legacy_row).execute()
     return result.data[0] if result.data else {}
 
 
@@ -168,7 +206,12 @@ def search_similar_cases(
     }
 
     result = client.rpc("match_interventions", params).execute()
-    return result.data or []
+    rows = result.data or []
+    for row in rows:
+        row.setdefault("source_type", "real")
+        row.setdefault("parent_session_id", None)
+        row.setdefault("source_session_id", None)
+    return rows
 
 
 def log_recommendation(

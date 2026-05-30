@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Dict
 
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -17,13 +17,48 @@ from dotenv import load_dotenv
 from supabase import create_client
 
 CURRENT_DIR = Path(__file__).resolve().parent
-if str(CURRENT_DIR) not in sys.path:
-    sys.path.insert(0, str(CURRENT_DIR))
+AGENT3_DIR = CURRENT_DIR.parent / "agent3"
+
+for _dir in (CURRENT_DIR, AGENT3_DIR):
+    if str(_dir) not in sys.path:
+        sys.path.insert(0, str(_dir))
 
 from recommendation_agent import run, AgentInput
 from vector_store import update_outcome
 
 load_dotenv()
+
+
+class _ConnectionManager:
+    def __init__(self) -> None:
+        self._connections: list[WebSocket] = []
+
+    async def connect(self, ws: WebSocket) -> None:
+        await ws.accept()
+        self._connections.append(ws)
+
+    def disconnect(self, ws: WebSocket) -> None:
+        try:
+            self._connections.remove(ws)
+        except ValueError:
+            pass
+
+    async def broadcast(self, payload: dict) -> None:
+        dead: list[WebSocket] = []
+        for ws in list(self._connections):
+            try:
+                await ws.send_json(payload)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self.disconnect(ws)
+
+
+ws_manager = _ConnectionManager()
+
+
+async def _broadcast_new_decision(data: dict) -> None:
+    await ws_manager.broadcast({"type": "new_decision", "data": data})
 
 
 def _get_supabase_client():
@@ -135,7 +170,7 @@ def health():
 
 
 @app.post("/recommend", response_model=RecommendationResponse)
-def recommend(req: RecommendationRequest):
+def recommend(req: RecommendationRequest, background_tasks: BackgroundTasks):
     """
     Main endpoint.
     Called by the orchestrator with Agent 1 + Agent 2 outputs.
@@ -166,7 +201,9 @@ def recommend(req: RecommendationRequest):
             user_meta  = user_meta,
         )
         result = run(agent_input)
-        return result.__dict__
+        result_dict = result.__dict__
+        background_tasks.add_task(_broadcast_new_decision, result_dict)
+        return result_dict
 
     except KeyError as e:
         # Invalid persona or sentiment value
@@ -209,16 +246,16 @@ def feedback(req: FeedbackRequest):
 
 
 @app.get("/logs")
-def logs(limit: int = 50, pending: bool = False):
+def logs(limit: int = 500, pending: bool = False, user_id: Optional[str] = None):
     """Return recent recommendations for the dashboard."""
     try:
         client = _get_supabase_client()
         query = client.table("recommendation_log").select("*").order("id", desc=True).limit(limit)
+        if user_id:
+            query = query.eq("user_id", user_id)
         resp = query.execute()
         rows = resp.data or []
 
-        # The current schema stores conversion feedback separately.
-        # Keep the dashboard working by exposing a best-effort pending view.
         for row in rows:
             row.setdefault("converted", None)
 
@@ -228,3 +265,14 @@ def logs(limit: int = 50, pending: bool = False):
         return rows
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.websocket("/ws/decisions")
+async def websocket_decisions(websocket: WebSocket):
+    """Live decision stream — broadcasts every new recommendation as it is created."""
+    await ws_manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
