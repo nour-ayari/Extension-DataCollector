@@ -1,8 +1,7 @@
 """Aggregate `coveo_events` into `coveo_sessions`.
 
 Reads `coveo_events` in pages, groups events by `session_id`, builds a
-canonical funnel sequence, infers derived booleans (converted, abandoned,
-contains_search), computes timestamps/duration/recency, and upserts into
+canonical funnel sequence, computes raw funnel signals, and upserts into
 `coveo_sessions` in batches.
 """
 from __future__ import annotations
@@ -51,18 +50,13 @@ CREATE TABLE public.coveo_sessions (
   recency_days double precision null,
   contains_search boolean null,
   contains_remove boolean null,
-  inferred_persona text null,
-  inferred_sentiment text null,
-  inferred_confidence double precision null,
-  inferred_intent text null,
-  inferred_churn_risk text null,
   created_at timestamp with time zone null default now(),
   constraint coveo_sessions_pkey primary key (session_id)
 );
 
-create index if not exists coveo_sessions_persona_idx on public.coveo_sessions using btree (inferred_persona, inferred_sentiment);
 create index if not exists coveo_sessions_converted_idx on public.coveo_sessions using btree (converted);
-create index if not exists coveo_sessions_churn_idx on public.coveo_sessions using btree (inferred_churn_risk);
+create index if not exists coveo_sessions_recency_idx on public.coveo_sessions using btree (recency_days);
+create index if not exists coveo_sessions_funnel_idx on public.coveo_sessions using btree (max_funnel_depth);
 """
     )
 
@@ -126,7 +120,20 @@ def aggregate_sessions(client, batch_size: int = DEFAULT_BATCH_SIZE, limit: int 
         if total_rows % 100000 == 0:
             print(f"Read {total_rows:,} events so far, sessions: {len(session_events):,}")
 
-    print(f"Finished scanning. Events read: {total_rows:,}. Sessions gathered: {len(session_events):,}")
+    sessions_before_filter = len(session_events)
+
+    session_events = {
+        sid: events
+        for sid, events in session_events.items()
+        if sum(1 for e in events if e.get("event_name") != "page_view") >= 1
+    }
+    sessions_after_filter = len(session_events)
+
+    print(
+        f"Finished scanning. Raw events fetched: {total_rows:,}. "
+        f"Sessions before filter: {sessions_before_filter:,}. "
+        f"Sessions after filter: {sessions_after_filter:,}."
+    )
 
     # compute global reference timestamp (max first_event_ts) for recency
     first_event_ts_list = []
@@ -145,6 +152,9 @@ def aggregate_sessions(client, batch_size: int = DEFAULT_BATCH_SIZE, limit: int 
     print(f"Aggregating {total_sessions:,} sessions and upserting in batches of {batch_size}")
 
     upserted = 0
+    converted_count = 0
+    cart_abandoned_count = 0
+    contains_remove_count = 0
     batch: list[dict[str, Any]] = []
     for index, (sid, events) in enumerate(session_items, start=1):
         # sort by timestamp
@@ -218,9 +228,6 @@ def aggregate_sessions(client, batch_size: int = DEFAULT_BATCH_SIZE, limit: int 
 
         session_record = {
             "session_id": sid,
-            "first_event_ts": int(first_ts),
-            "last_event_ts": int(last_ts),
-            "session_duration_ms": duration_ms,
             "funnel_sequence": ">".join(funnel_sequence),
             "max_funnel_depth": max_depth,
             "converted": converted,
@@ -228,17 +235,21 @@ def aggregate_sessions(client, batch_size: int = DEFAULT_BATCH_SIZE, limit: int 
             "checkout_abandoned": checkout_abandoned,
             "session_event_count": session_event_count,
             "unique_event_count": unique_event_count,
+            "first_event_ts": int(first_ts),
+            "last_event_ts": int(last_ts),
+            "session_duration_ms": duration_ms,
             "contains_search": contains_search,
             "contains_remove": contains_remove,
             "recency_days": recency_days,
-            "inferred_persona": inferred_persona,
-            "inferred_sentiment": inferred_sentiment,
-            "inferred_confidence": inferred_confidence,
-            "inferred_intent": inferred_intent,
-            "inferred_churn_risk": inferred_churn_risk,
         }
 
         batch.append(session_record)
+        if converted:
+            converted_count += 1
+        if cart_abandoned:
+            cart_abandoned_count += 1
+        if contains_remove:
+            contains_remove_count += 1
         if len(batch) >= batch_size:
             ok = _upsert_batch(client, batch)
             if not ok:
@@ -259,7 +270,16 @@ def aggregate_sessions(client, batch_size: int = DEFAULT_BATCH_SIZE, limit: int 
         else:
             upserted += len(batch)
 
-    print(f"Completed. Sessions upserted: {upserted:,}")
+    print("═" * 46)
+    print(" SESSION BUILD COMPLETE")
+    print(f" Raw events fetched         : {total_rows:,}")
+    print(f" Sessions before filter     : {sessions_before_filter:,}")
+    print(f" Sessions after filter      : {sessions_after_filter:,}")
+    print(f" Converted                  : {converted_count:,}  ({(converted_count / total_sessions * 100.0) if total_sessions else 0.0:.1f}%)")
+    print(f" Cart abandoned             : {cart_abandoned_count:,}")
+    print(f" Contains remove            : {contains_remove_count:,}")
+    print(f" Upserted to coveo_sessions : {upserted:,}")
+    print("═" * 46)
 
 
 def build_coveo_sessions(limit: int | None = None, batch_size: int = DEFAULT_BATCH_SIZE) -> None:

@@ -43,6 +43,22 @@ from pipeline.agent3.vector_store import upsert_case
 
 load_dotenv()
 
+
+def _f(value, default: float = 0.0) -> float:
+    """Safely coerce a Supabase value to float.
+
+    Handles None, empty strings, and stringified numbers returned by Supabase.
+    """
+    try:
+        if value is None:
+            return default
+        if isinstance(value, str):
+            if value.strip() == "":
+                return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
 # ---------------------------------------------------------------------------
 # Conversion label rules — derived from real user_features columns
 # ---------------------------------------------------------------------------
@@ -59,11 +75,11 @@ def _is_converted(row: dict) -> bool:
          AND max_funnel_depth >= 6    → no abandon + deep funnel
       5. otherwise                   → not converted
     """
-    purchase_rate        = row.get("purchase_rate")        or 0
-    final_score          = row.get("final_score")          or 0
-    checkout_rate        = row.get("checkout_rate")        or 0
-    cart_abandonment_rate= row.get("cart_abandonment_rate")or 0
-    max_funnel_depth     = row.get("max_funnel_depth")     or 0
+    purchase_rate        = _f(row.get("purchase_rate"))
+    final_score          = _f(row.get("final_score"))
+    checkout_rate        = _f(row.get("checkout_rate"))
+    cart_abandonment_rate= _f(row.get("cart_abandonment_rate"))
+    max_funnel_depth     = int(_f(row.get("max_funnel_depth")))
 
     if purchase_rate > 0:                                         return True
     if final_score >= 75:                                         return True
@@ -77,9 +93,9 @@ def _infer_sentiment(row: dict) -> tuple[str, float]:
     Infer sentiment from behavioral signals when Agent 2 output is absent.
     Returns (label, confidence).
     """
-    abandon = row.get("cart_abandonment_rate", 0.5) or 0
-    bounce  = row.get("bounce_rate",           0.5) or 0
-    purchase= row.get("purchase_rate",         0.0) or 0
+    abandon = _f(row.get("cart_abandonment_rate"), 0.5)
+    bounce  = _f(row.get("bounce_rate"), 0.5)
+    purchase= _f(row.get("purchase_rate"), 0.0)
 
     if purchase > 0.3 and abandon < 0.2:  return "Positive", 0.72
     if abandon  > 0.6 or bounce   > 0.5:  return "Negative", 0.68
@@ -90,10 +106,10 @@ def _infer_intent(row: dict) -> str:
     """
     Map behavioral signals to an intent label that Agent 2 would produce.
     """
-    purchase_rate        = row.get("purchase_rate",        0) or 0
-    cart_abandonment_rate= row.get("cart_abandonment_rate",0) or 0
-    checkout_rate        = row.get("checkout_rate",        0) or 0
-    max_funnel_depth     = row.get("max_funnel_depth",     0) or 0
+    purchase_rate        = _f(row.get("purchase_rate"))
+    cart_abandonment_rate= _f(row.get("cart_abandonment_rate"))
+    checkout_rate        = _f(row.get("checkout_rate"))
+    max_funnel_depth     = int(_f(row.get("max_funnel_depth")))
 
     if purchase_rate > 0:                       return "praise"
     if checkout_rate > 0 and cart_abandonment_rate > 0.5: return "track_refund"
@@ -103,9 +119,9 @@ def _infer_intent(row: dict) -> str:
 
 
 def _infer_churn_risk(row: dict, sentiment: str) -> str:
-    abandon  = row.get("cart_abandonment_rate", 0) or 0
-    purchase = row.get("purchase_rate",         0) or 0
-    recency  = row.get("recency_days",        999) or 999
+    abandon  = _f(row.get("cart_abandonment_rate"))
+    purchase = _f(row.get("purchase_rate"))
+    recency  = _f(row.get("recency_days"), 999)
 
     if sentiment == "Negative" and abandon > 0.5:          return "high"
     if sentiment == "Negative" and purchase == 0:          return "medium"
@@ -132,11 +148,31 @@ USER_FEATURES_COLUMNS = [
 
 def fetch_user_features(limit: int | None = None) -> list[dict]:
     client = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
-    query  = client.table("user_features").select(",".join(USER_FEATURES_COLUMNS))
+    cols = ",".join(USER_FEATURES_COLUMNS)
+
+    # If a limit is provided, fetch just that many rows.
     if limit:
-        query = query.limit(limit)
-    result = query.execute()
-    return result.data or []
+        query = client.table("user_features").select(cols).limit(limit)
+        result = query.execute()
+        return result.data or []
+
+    # Otherwise page through all rows using the Supabase range API (pages of 1000)
+    page_size = 1000
+    rows: list[dict] = []
+    offset = 0
+    while True:
+        start = offset
+        end = offset + page_size - 1
+        res = client.table("user_features").select(cols).range(start, end).execute()
+        batch = res.data or []
+        if not batch:
+            break
+        rows.extend(batch)
+        if len(batch) < page_size:
+            break
+        offset += page_size
+
+    return rows
 
 
 def build_seed_case(row: dict) -> dict | None:

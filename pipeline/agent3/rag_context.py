@@ -386,6 +386,30 @@ def _funnel_stage_from_depth(depth: Optional[int]) -> str:
     return "early_browse"
 
 
+def _safe_float(value) -> Optional[float]:
+    try:
+        return float(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _safe_int(value) -> Optional[int]:
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _safe_bool(value) -> Optional[bool]:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.lower() in ("true", "1", "yes")
+    return bool(value)
+
+
 def from_user_meta(
     user_meta: Optional[dict],
     persona: Optional[str] = None,
@@ -396,42 +420,44 @@ def from_user_meta(
 ) -> UserContext:
     m = user_meta or {}
 
-    depth = m.get("max_funnel_depth")
-    reached_checkout = (m.get("checkout_rate", 0) or 0) > 0 or (depth is not None and depth >= 6)
-    is_purchaser = (m.get("purchase_rate", 0) or 0) > 0 or (m.get("monetary", 0) or 0) > 0
+    depth = _safe_int(m.get("max_funnel_depth"))
+    reached_checkout = (_safe_float(m.get("checkout_rate")) or 0.0) > 0 \
+                       or (depth is not None and depth >= 6)
+    is_purchaser = (_safe_float(m.get("purchase_rate")) or 0.0) > 0 \
+                   or (_safe_float(m.get("monetary")) or 0.0) > 0
 
     return UserContext(
         max_funnel_depth=depth,
         funnel_sequence=m.get("funnel_sequence"),
         reached_checkout=reached_checkout,
         is_purchaser=is_purchaser,
-        cart_abandonment_rate=m.get("cart_abandonment_rate"),
-        avg_scroll_depth=m.get("avg_scroll_depth"),
-        avg_clicks=m.get("avg_clicks"),
-        bounce_rate=m.get("bounce_rate"),
-        avg_session_duration=m.get("avg_session_duration"),
-        recency_days=m.get("recency_days"),
-        frequency=m.get("frequency"),
-        monetary=m.get("monetary"),
-        preferred_hour=m.get("preferred_hour"),
+        cart_abandonment_rate=_safe_float(m.get("cart_abandonment_rate")),
+        avg_scroll_depth=_safe_float(m.get("avg_scroll_depth")),
+        avg_clicks=_safe_float(m.get("avg_clicks")),
+        bounce_rate=_safe_float(m.get("bounce_rate")),
+        avg_session_duration=_safe_float(m.get("avg_session_duration")),
+        recency_days=_safe_float(m.get("recency_days")),
+        frequency=_safe_float(m.get("frequency")),
+        monetary=_safe_float(m.get("monetary")),
+        preferred_hour=_safe_float(m.get("preferred_hour")),
         preferred_source=m.get("preferred_source"),
         device_mode=m.get("device_mode"),
-        is_weekend=m.get("is_weekend"),
+        is_weekend=_safe_bool(m.get("is_weekend")),
         sentiment=sentiment,
-        confidence=confidence,
+        confidence=_safe_float(confidence),
         intent=intent or m.get("intent"),
         churn_risk=churn_risk or m.get("churn_risk"),
-        nb_visits=m.get("nb_visits"),
+        nb_visits=_safe_int(m.get("nb_visits")),
         persona=persona,
-        age=m.get("age"),
+        age=_safe_int(m.get("age")),
         gender=m.get("gender"),
         region=m.get("region"),
-        r_score=m.get("r_score"),
-        f_score=m.get("f_score"),
-        m_score=m.get("m_score"),
-        rfm_score=m.get("rfm_score"),
-        behaviour_score=m.get("behaviour_score"),
-        intent_score=m.get("intent_score"),
-        context_score=m.get("context_score"),
-        final_score=m.get("final_score"),
+        r_score=_safe_float(m.get("r_score")),
+        f_score=_safe_float(m.get("f_score")),
+        m_score=_safe_float(m.get("m_score")),
+        rfm_score=_safe_float(m.get("rfm_score")),
+        behaviour_score=_safe_float(m.get("behaviour_score")),
+        intent_score=_safe_float(m.get("intent_score")),
+        context_score=_safe_float(m.get("context_score")),
+        final_score=_safe_float(m.get("final_score")),
     )
