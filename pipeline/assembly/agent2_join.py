@@ -10,6 +10,17 @@ logger = logging.getLogger(__name__)
 AGENT2_TABLE_CANDIDATES = ("nlp_conversation_output", "nlp_conversation_outputs")
 
 
+def _f(value, default: float = 0.0) -> float:
+    try:
+        if value is None:
+            return default
+        if isinstance(value, str) and value.strip() == "":
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def _parse_dt(value) -> datetime | None:
     if not value:
         return None
@@ -23,9 +34,9 @@ def _parse_dt(value) -> datetime | None:
 
 
 def _infer_sentiment(row: pd.Series) -> Tuple[str, float]:
-    abandon = row.get("cart_abandonment_rate", 0.5) or 0
-    bounce = row.get("bounce_rate", 0.5) or 0
-    purchase = row.get("purchase_rate", 0.0) or 0
+    abandon = _f(row.get("cart_abandonment_rate"), 0.5)
+    bounce = _f(row.get("bounce_rate"), 0.5)
+    purchase = _f(row.get("purchase_rate"), 0.0)
 
     if purchase > 0.3 and abandon < 0.2:
         return "Positive", 0.70
@@ -35,10 +46,10 @@ def _infer_sentiment(row: pd.Series) -> Tuple[str, float]:
 
 
 def _infer_intent(row: pd.Series) -> str:
-    purchase_rate = row.get("purchase_rate", 0) or 0
-    cart_abandonment_rate = row.get("cart_abandonment_rate", 0) or 0
-    checkout_rate = row.get("checkout_rate", 0) or 0
-    max_funnel_depth = row.get("max_funnel_depth", 0) or 0
+    purchase_rate = _f(row.get("purchase_rate"))
+    cart_abandonment_rate = _f(row.get("cart_abandonment_rate"))
+    checkout_rate = _f(row.get("checkout_rate"))
+    max_funnel_depth = int(_f(row.get("max_funnel_depth")))
 
     if purchase_rate > 0:
         return "praise"
@@ -52,9 +63,9 @@ def _infer_intent(row: pd.Series) -> str:
 
 
 def _infer_churn_risk(row: pd.Series, sentiment: str) -> str:
-    abandon = row.get("cart_abandonment_rate", 0) or 0
-    purchase = row.get("purchase_rate", 0) or 0
-    recency = row.get("recency_days", 999) or 999
+    abandon = _f(row.get("cart_abandonment_rate"))
+    purchase = _f(row.get("purchase_rate"))
+    recency = _f(row.get("recency_days"), 999)
 
     if sentiment == "Negative" and abandon > 0.5:
         return "high"

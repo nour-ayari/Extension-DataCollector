@@ -12,6 +12,7 @@ from typing import Optional, Dict
 from fastapi import BackgroundTasks, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from supabase import create_client
@@ -25,6 +26,7 @@ for _dir in (CURRENT_DIR, AGENT3_DIR):
 
 from recommendation_agent import run, AgentInput
 from vector_store import update_outcome
+from pipeline.agent3.vector_store import _get_model
 
 load_dotenv()
 
@@ -92,10 +94,22 @@ def _build_user_meta_from_features(row: Dict) -> Dict:
             meta[key] = value
     return meta
 
+@asynccontextmanager
+async def lifespan(app):
+    # Warm up the embedding model once at startup to avoid cold-start delays
+    try:
+        _get_model()
+    except Exception:
+        # Don't fail startup if the model can't be loaded here; it will be attempted on demand.
+        pass
+    yield
+
+
 app = FastAPI(
     title="Agent 3 — Recommendation API",
     description="RAG-based recommendation engine. Inputs: persona (Agent 1) + sentiment (Agent 2).",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
